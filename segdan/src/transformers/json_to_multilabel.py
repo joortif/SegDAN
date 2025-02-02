@@ -61,8 +61,7 @@ class JSONToMultilabelTransformer(Transformer):
                     if np.max(polygon) <= 1:
                         polygon = self._scale_polygon(polygon, h, w)
                     
-                    polygon = polygon.astype(np.int32)
-                    cv2.fillPoly(mask, [polygon], 255)  
+                    cv2.fillPoly(mask_obj, [polygon.astype(np.int32)], 255)  
 
                     depth_values = depth_map[mask_obj == 255]
                     if depth_values.size > 0:
@@ -73,7 +72,7 @@ class JSONToMultilabelTransformer(Transformer):
             object_depths.sort(key=lambda x: x[0], reverse=True)
 
             for _, category_id, polygon in object_depths:
-                cv2.fillPoly(mask, [polygon], category_id)  
+                cv2.fillPoly(mask, [polygon.astype(np.int32)], category_id)  
 
             transformed_masks.append(mask)
                 

@@ -66,10 +66,10 @@ class YOLOToMultilabelTransformer(Transformer):
                 #plt.show()
                 
                 depth_values = depth_map[mask_obj == 255]
-
-                depth_mean = np.mean(depth_values)
-
-                object_depths.append((depth_mean, class_id, points))
+                
+                if depth_values.size > 0:
+                    depth_mean = np.mean(depth_values)
+                    object_depths.append((depth_mean, class_id, points))
 
             object_depths.sort(key=lambda x: x[0], reverse=True)
 
