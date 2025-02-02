@@ -1,3 +1,4 @@
+from src.extensions.extensions import LabelExtensions
 from src.models.depthestimator import DepthEstimator
 from src.utils.utils import Utils
 from src.utils.imagelabelutils import ImageLabelUtils
@@ -28,7 +29,7 @@ class YOLOToMultilabelTransformer(Transformer):
 
             return annotations
 
-    def transform(self, input_data: str, img_path: str, img_ext: str, fill_background: int | None, depth_model: str ="Intel/dpt-swinv2-tiny-256", output_path: str = None, verbose: bool = False):
+    def transform(self, input_data: str, img_path: str, fill_background: int | None, depth_model: str ="Intel/dpt-swinv2-tiny-256", output_path: str = None, verbose: bool = False):
         
         os.makedirs(output_path, exist_ok=True)
 
@@ -43,7 +44,7 @@ class YOLOToMultilabelTransformer(Transformer):
 
             objects = self._read_yolo(label_path)
 
-            image_path = ImageLabelUtils.label_to_image(label_path, img_path, img_ext)
+            image_path = ImageLabelUtils.label_to_image(label_path, img_path, LabelExtensions.JPG.value)
 
             depth_map = depth_estimator.generate_depth_map(image_path)
 
@@ -78,7 +79,5 @@ class YOLOToMultilabelTransformer(Transformer):
             converted_masks.append(mask)
 
             ImageLabelUtils.save_multilabel_mask(mask, label_name, output_path)
-
-            Utils.overlay_mask_on_image(image_path, mask)
             
         return converted_masks

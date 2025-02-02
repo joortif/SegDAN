@@ -20,7 +20,7 @@ class JSONToMultilabelTransformer(Transformer):
         with open(json_path, "r", encoding="utf-8") as f:
             return json.load(f)
 
-    def transform(self, input_data: str, img_dir: str, fill_background: int | None , depth_model: str ="Intel/dpt-swinv2-tiny-256", output_path: str = None, verbose: bool = False):
+    def transform(self, input_data: str, img_path: str, fill_background: int | None , depth_model: str ="Intel/dpt-swinv2-tiny-256", output_path: str = None, verbose: bool = False):
 
         os.makedirs(output_path, exist_ok=True)
 
@@ -35,13 +35,13 @@ class JSONToMultilabelTransformer(Transformer):
             img_id = img_info['id']
             img_filename = img_info['file_name']
 
-            img_path = os.path.join(img_dir, img_filename)
+            image_path = os.path.join(img_path, img_filename)
 
-            if not os.path.exists(img_path):
+            if not os.path.exists(image_path):
                 print(f"Image {img_filename} not found, skipping...")
                 continue
 
-            depth_map = depth_estimator.generate_depth_map(img_path)
+            depth_map = depth_estimator.generate_depth_map(image_path)
 
             h, w = depth_map.shape
             mask = self._create_empty_mask(h, w, fill_background)
@@ -65,9 +65,10 @@ class JSONToMultilabelTransformer(Transformer):
                     cv2.fillPoly(mask, [polygon], 255)  
 
                     depth_values = depth_map[mask_obj == 255]
-                    depth_mean = np.mean(depth_values)
+                    if depth_values.size > 0:
+                        depth_mean = np.mean(depth_values)
 
-                    object_depths.append((depth_mean, category_id, polygon))
+                        object_depths.append((depth_mean, category_id, polygon))
 
             object_depths.sort(key=lambda x: x[0], reverse=True)
 

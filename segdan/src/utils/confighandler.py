@@ -63,7 +63,7 @@ class ConfigHandler():
             raise ValueError(f"The dataset must include a subdirectory 'images' for the image files, and optionally a 'labels' subdirectory for the corresponding labels.")
         
         if not os.path.exists(data["output_path"]):
-            raise FileNotFoundError(f"Directory {data['dataset_path']} does not exist.")
+            raise FileNotFoundError(f"Output directory {data['dataset_path']} does not exist.")
         
         if not os.path.isdir(data["output_path"]):
             raise ValueError(f"Path {data['dataset_path']} is not a valid directory.")

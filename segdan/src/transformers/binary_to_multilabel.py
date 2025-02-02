@@ -2,7 +2,7 @@ from src.transformers.transformer import Transformer
 
 import numpy as np
 
-class BinaryToMultilabel(Transformer):
+class BinaryToMultilabelTransformer(Transformer):
 
     def __init__(self):
         super().__init__()
