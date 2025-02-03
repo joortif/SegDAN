@@ -33,34 +33,6 @@ class Transformer():
 
         return polygon
     
-    def _load_depth_model(self, model_name, device, verbose):
-        processor = AutoImageProcessor.from_pretrained(model_name)
-        model = AutoModelForDepthEstimation.from_pretrained(model_name).to(device)
-
-        if verbose:
-            self.logger.info(f"Model {model_name} loaded.")
-
-        return model, processor
     
-    def _generate_depth_map(self, image, model, processor, device):
-        
-        img = cv2.imread(image)
-        h, w = img.shape[:2]
-        img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-
-        inputs = processor(images=img_rgb, return_tensors="pt").to(device)
-
-        with torch.no_grad():
-            outputs = model(**inputs)
-            depth_map = outputs.predicted_depth
-
-        depth_map = depth_map.squeeze().cpu().numpy()
-
-        depth_map = cv2.resize(depth_map, (w, h), interpolation=cv2.INTER_LINEAR)
-
-        return depth_map.astype(np.uint8)
-
-
-
-    def transform(self, input_data):
+    def transform(self, input_data: str, output_dir: str):
         pass

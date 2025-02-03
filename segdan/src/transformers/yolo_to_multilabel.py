@@ -7,11 +7,7 @@ from src.transformers.transformer import Transformer
 import cv2
 import os 
 import numpy as np
-from PIL import Image
 from tqdm import tqdm
-import torch
-import matplotlib.pyplot as plt
-
 
 class YOLOToMultilabelTransformer(Transformer):
 
@@ -29,9 +25,9 @@ class YOLOToMultilabelTransformer(Transformer):
 
             return annotations
 
-    def transform(self, input_data: str, img_path: str, fill_background: int | None, depth_model: str ="Intel/dpt-swinv2-tiny-256", output_path: str = None, verbose: bool = False):
+    def transform(self, input_data: str, output_dir: str, img_path: str, fill_background: int | None, depth_model: str ="Intel/dpt-swinv2-tiny-256"):
         
-        os.makedirs(output_path, exist_ok=True)
+        os.makedirs(output_dir, exist_ok=True)
 
         converted_masks = []
         labels = os.listdir(input_data)
@@ -60,11 +56,6 @@ class YOLOToMultilabelTransformer(Transformer):
 
                 cv2.fillPoly(mask_obj, [points.astype(np.int32)], 255)
                 
-                #plt.imshow(mask_obj, cmap='gray')
-                #plt.title(f'Máscara del objeto clase {class_id}')
-                #plt.axis('off')
-                #plt.show()
-                
                 depth_values = depth_map[mask_obj == 255]
                 
                 if depth_values.size > 0:
@@ -78,6 +69,6 @@ class YOLOToMultilabelTransformer(Transformer):
 
             converted_masks.append(mask)
 
-            ImageLabelUtils.save_multilabel_mask(mask, label_name, output_path)
+            ImageLabelUtils.save_multilabel_mask(mask, label_name, output_dir)
             
         return converted_masks

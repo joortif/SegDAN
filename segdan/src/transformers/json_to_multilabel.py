@@ -2,8 +2,6 @@ from src.models.depthestimator import DepthEstimator
 from src.utils.imagelabelutils import ImageLabelUtils
 from src.utils.utils import Utils
 from src.transformers.transformer import Transformer
-from concurrent.futures import ThreadPoolExecutor, as_completed
-
 
 import json
 import os
@@ -20,9 +18,9 @@ class JSONToMultilabelTransformer(Transformer):
         with open(json_path, "r", encoding="utf-8") as f:
             return json.load(f)
 
-    def transform(self, input_data: str, img_path: str, fill_background: int | None , depth_model: str ="Intel/dpt-swinv2-tiny-256", output_path: str = None, verbose: bool = False):
+    def transform(self, input_data: str, output_dir: str, img_dir: str, fill_background: int | None , depth_model: str ="Intel/dpt-swinv2-tiny-256"):
 
-        os.makedirs(output_path, exist_ok=True)
+        os.makedirs(output_dir, exist_ok=True)
 
         transformed_masks = []
 
@@ -35,7 +33,7 @@ class JSONToMultilabelTransformer(Transformer):
             img_id = img_info['id']
             img_filename = img_info['file_name']
 
-            image_path = os.path.join(img_path, img_filename)
+            image_path = os.path.join(img_dir, img_filename)
 
             if not os.path.exists(image_path):
                 print(f"Image {img_filename} not found, skipping...")
@@ -76,6 +74,6 @@ class JSONToMultilabelTransformer(Transformer):
 
             transformed_masks.append(mask)
                 
-            ImageLabelUtils.save_multilabel_mask(mask, img_filename, output_path)
+            ImageLabelUtils.save_multilabel_mask(mask, img_filename, output_dir)
 
         return transformed_masks
