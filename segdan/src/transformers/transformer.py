@@ -1,10 +1,7 @@
 
 import numpy as np
-import cv2
 import logging
 from transformers.utils import logging as hf_logging
-from transformers import AutoImageProcessor, AutoModelForDepthEstimation
-import torch
 
 class Transformer():
 

@@ -8,15 +8,15 @@
     
     "cluster_images": true,
     "embedding_frameworks": ["huggingface", "pytorch", "tensorflow", "opencv"], 
-    "models_huggingface": [""],
-    "models_pytorch": [""],
-    "models_tensorflow": [""],
+    "models_huggingface": ["openai/clip-vit-base-patch16"],
+    "models_pytorch": ["resnet50"],
+    "models_tensorflow": ["MobileNetV2"],
     
-    "resize_height": ,
-    "resize_width": ,
-    "lbp_radius": ,
-    "lbp_num_points": ,
-    "lbp_method": , 
+    "resize_height": 224,
+    "resize_width": 224,
+    "lbp_radius": 16,
+    "lbp_num_points": 48,
+    "lbp_method": "uniform", 
 
     "clustering_models": {
         "kmeans": {
@@ -44,27 +44,37 @@
         }
     },
 
-    "clustering_metric": ,
+    "clustering_metric": "calinski",
     "plot": true,
+    "visualization_method": "pca",
 
     "reduction": true,
-    "reduction_percentage": ,
-    "reduction_type": ,
-    "diverse_percentage": ,
-    "reduction_model": ,
+    "reduction_percentage": 0.7,
+    "reduction_type": "representative",
+    "diverse_percentage": 0.0,
+    "reduction_model": {
+        "kmeans": {
+            "n_clusters": 5,  
+            "random_state": 123
+        }
+    },
 
-    "depth_model": ,
-    "threshold": ,
+    "depth_model": "Intel/dpt-swinv2-tiny-256",
+    "threshold": 255,
     "color_dict": {"[0,0,255]": 1,
                    "[0,255,0]": 2},
 
-    "split_percentages": [0.7, 0.2, 0.1],
+    "split_percentages": {
+        "train": 0.7,
+        "valid": 0.2,
+        "test": 0.1
+    },
     "stratification": true,
-    "stratification_type": ["pixels", "objects", "ratio"], 
+    "stratification_type": "pixels", 
 
     "segmentation": "semantic",
     "models": "unet",
-    "metric": "dice_score",
+    "segmentation_metric": "dice_score",
     "batch_size": 8,
     "epochs": 100,
     "background": 3,

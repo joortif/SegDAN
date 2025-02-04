@@ -1,0 +1,246 @@
+#Example configuration file for SegDAN
+
+# DATASET CONFIGURATION
+# dataset_path: Path to the directory containing the images and optionally their corresponding labels. 
+# The directory must have subdirectories "/images" for the images and "/labels" for the labels.
+dataset_path: C:/Users/joortif/Desktop/datasets/Completos/melanoma_3c/train
+
+# output_path: Path for the output and results of the program: analysis, clustering, reduction, transformation and metric comparison results.
+output_path: C:/Users/joortif/Desktop/Resultados_SegDAN/melanoma_c3
+
+# DATASET ANALYSIS
+# analyze: This parameter is used to perform an analysis of the image dataset and its labels.
+# If the dataset_path only contains images then only their sizes are shown.
+# If labels are also provided, then a deeper analysis will be performed: 
+# - Labels will be converted to multiclass if necessary.
+# - Image and label sizes will be analyzed, as well as their correspondency. They must have the same file names.
+# - The number of classes in the whole dataset will be calculated from the labels.
+# - Metrics are calculated such as number of objects per image, object areas (avg, std, max, min), 
+#   boxplots of classes areas, bounding boxes areas (avg, std, max, min) and ellipses areas (avg, std, max, min)
+# The results will be shown and saved in output_path
+analyze: false
+
+# IMAGE EMBEDDING AND CLUSTERING
+# cluster_images: This parameter allows to study the diversity and similarity of the images using different embedding models and frameworks.
+# The images will be embedded using various machine learning models and the resulting embeddings will be analyzed for clustering.
+cluster_images: true
+
+# embedding_frameworks: The user can select different frameworks to embed the images.
+# Each framework uses different pre-trained models to transform images into high-dimensional vectors (embeddings) that capture their features.
+# These embeddings can then be used for clustering, similarity analysis, or dataset reduction.
+# Options include:
+# - "huggingface": Use Hugging Face models, such as CLIP for general image representation.
+# - "pytorch": Use PyTorch models, including CNN-based models like ResNet for image feature extraction.
+# - "tensorflow": Use TensorFlow models, for image embedding tasks.
+# - "opencv": Use OpenCV Local Binary Patterns (LBP) for texture feature extraction. It is particularly useful for analyzing 
+#   texture patterns and can be applied to image clustering.
+embedding_frameworks:
+  - huggingface
+  - pytorch
+  - tensorflow
+  - opencv
+models_huggingface:
+  - openai/clip-vit-base-patch16
+models_pytorch:
+  - resnet50
+models_tensorflow:
+  - MobileNetV2
+
+# resize_height, resize_width: Resize height and width for images in the dataset to obtain the embeddings with Tensorflow models and OpenCV LBP technique. 
+# Lower values might fasten the proccess, but may also result in loss of fine details in the images.
+# Increasing the value may improve feature extraction quality but will also increase computation time.
+# Default values are 224x224.
+resize_height: 224
+resize_width: 224
+
+# lbp_radius: Defines the radius (in pixels) of the circular neighborhood around each pixel for calculating Local Binary Patterns (LBP). 
+# A larger radius captures more global texture information, while a smaller radius focuses on finer, local texture details. 
+# Default value to 8.
+lbp_radius: 16
+
+# lbp_num_points: Specifies the number of sampling points around the central pixel for calculating the LBP. 
+# Higher values result in a more detailed and finer texture representation but also increase computational complexity. 
+# Typical values are 8, 16, and 24. Defaults to 24.
+lbp_num_points: 48
+
+# lbp_method: Specifies the method used for LBP calculation. 
+# "uniform" method assigns the LBP values to a limited number of patterns, making it more robust and less sensitive to noise, 
+# particularly useful for texture classification. Other methods are "default", "ror", "nri_uniform" or "var".
+lbp_method: uniform
+
+# clustering_models: Defines the clustering model(s) to use with the beforehand calculated embeddings. 
+# The possible models are KMeans, AgglomerativeClustering, DBSCAN and OPTICS. 
+# You can either specify fixed values for the model's hyperparameters or define a range of values to perform a grid search 
+# for finding the best combination of hyperparameters.
+clustering_models:
+  
+  kmeans:
+    # n_clusters: Specifies the number of clusters to form in KMeans.
+    # Can be set to a fixed value or a range for grid search.
+    n_clusters: 5
+    
+    # random_state: Seed for random number generator to ensure reproducibility of results.
+    random_state: 123
+
+  agglomerative:
+    # n_clusters: Defines the number of clusters to form in AgglomerativeClustering.
+    # Can be set to a fixed value or a range for grid search.
+    n_clusters: 5
+
+    # linkage: Method used to calculate the linkage between clusters ("ward", "complete", "average", "single").
+    # Can be fixed or a range of values can be specified for grid search.
+    linkage: ward
+  
+  dbscan:
+    # eps_range: Range for the epsilon parameter (eps) in DBSCAN. Defines the maximum distance between two samples 
+    # to be considered as neighbors.
+    # The range includes a minimum value, maximum value, and step size to create a grid of possible eps values for tuning.
+    # It can be a fixed value with establishing "eps" as the hyperparameter.
+    eps_range:
+      min: 0.1
+      max: 0.5
+      step: 0.1
+
+    # min_samples_range: Range for the minimum number of samples required to form a core point in DBSCAN.
+    # The range includes a minimum value, maximum value, and step size to perform grid search.
+    # It can be a fixed value with establishing "min_samples" as the hyperparameter.
+    min_samples_range:
+      min: 5
+      max: 20
+      step: 1
+  
+  optics:
+    # min_samples: Minimum number of samples required to form a cluster in OPTICS. 
+    # The min_samples parameter affects how sensitive the algorithm is to noise and the formation of clusters.
+    # This can be set as a fixed value.
+    min_samples: 5
+
+# clustering_metric: Metric used for evaluating the quality of the clustering. It can be "silhouette" for the Silhouette Score,
+# "calisnki" for the Calinski-Harabasz index or "davies" for the Davies-Bouldin index
+clustering_metric: calinski
+
+# plot: Flag to enable or disable plotting of the results. If true, plots for the clustering analysis, model performance, etc., will be generated and saved in output_path.
+plot: true
+
+# visualization_technique: Defines the dimensionality reduction technique to be used for visualizing the data in lower dimensions (2D) if plot is True. 
+# It can be "tsne" (t-Distributed Stochastic Neighbor Embedding) or 
+# "pca" (Principal Component Analysis). 
+# Defaults to pca.
+visualization_technique: tsne
+
+# DATASET REDUCTION
+# reduction: Flag that indicates whether to reduce the dataset or not. The reduction is done based on clustering results by selecting the most significant images 
+# depending on the 'reduction_type' parameter.
+reduction: true
+
+# reduction_percentage: Percentage of the original dataset to retain after applying reduction.
+reduction_percentage: 0.7
+
+# reduction_type: Strategy to apply when selecting images from each cluster.
+# "representative" keeps the most representative images (closest to the center of each cluster) while "diverse" selects those images that are farthest from the center.
+# You can also use "random" to select randomly a number of images in each cluster.
+# Defaults to representative.
+reduction_type: representative
+
+# diverse_percentage: Used when the reduction_type is "representative" or "random". It indicates the percentage of the diverse images to retain from each cluster.
+# Defaults to 0.
+diverse_percentage: 0.0
+
+# reduction_model: Clustering model to apply in order to select the images from each cluster. It can be KMeans, AgglomerativeClustering, DBSCAN or OPTICS. Only one model must 
+# be specified.
+# It can also use the best model with the best hyperparameters depending on "clustering_metric" from the clustering_models list
+# using "best_model" if the cluster_images flag is true.
+reduction_model: best_model
+
+# TRANSFORMATION CONFIGURATION
+
+# depth_model: Depth estimation model to use from HuggingFace if needed for converting YOLO and COCO/JSON format labels to multilabel. 
+# The model is used to analyze the depth of each object in an image, helping to determine the relative positioning. 
+# In cases where multiple objects overlap, the depth model allows us to distinguish which object is closer to the camera 
+# and which is further away. This depth information helps to improve the accuracy of the final label by providing a more precise 
+# understanding of object relationships, enhancing the quality of the segmentation or detection output.
+# Defaults to Intel/dpt-swinv2-tiny-256 model from HuggingFace. If the labels are already in multilabel format or the transformation
+# is not needed, this parameter will be ignored.
+depth_model: Intel/dpt-swinv2-tiny-256
+
+# threshold: Pixel threshold for binary segmentation labels. If a pixel is greater or equal to the threshold, then it will be marked as 1
+# when transforming the original label to a multilabel mask. The rest of the pixels will be marked as 0.
+# Defaults to 255. If the labels are not for binary segmentation, this parameter will be ignored.
+threshold: 255
+
+# # color_dict: A dictionary that maps specific RGB colors to class labels in the segmentation masks. 
+# This is useful for transforming the color-coded segmentation masks into a format compatible with the model, where each 
+# color represents a unique object class. The dictionary keys are the RGB values of the color, and the values are the 
+# corresponding class labels for segmentation. 
+# If the masks are color-coded but no dictionary is provided, one will be calculated automatically by assigning a class to each color,
+# starting from 0, in the order of their appearance. If the dictionary is not needed, this parameter will be ignored.
+color_dict:
+  "[0,0,255]": 1
+  "[0,255,0]": 2
+
+# DATA SPLIT CONFIGURATION
+# split_percentages: Defines the percentage of the dataset used for training, validation and testing. 
+split_percentages:
+  train: 0.7
+  valid: 0.2
+  test: 0.1
+
+# stratification: Flag that ensures the dataset split is stratified. 
+# Although stratification may provide more realistic and correct results for the final model, it can increase computational complexity.
+stratification: true
+
+# stratification_type: Defines the strategy to stratify the original dataset. It can be:
+# - "pixels": Stratifies based on the number of pixels for each class in the dataset, ensuring that the distribution of pixels 
+#   for each class is maintained across the splits.
+# - "objects": Stratifies based on the number of objects of each class, ensuring that the number of instances of each class 
+#   is consistent across the splits.
+# - "pixel_to_object_ratio": Stratifies based on the ratio of pixels to objects for each class in the image, helping to maintain 
+#   a balance between the relative size and the frequency of each class in the dataset splits. 
+stratification_type: pixels
+
+# cross_validation: Defines the number of folds for cross-validation.
+# Cross-validation is a technique used to evaluate the model's performance by splitting the dataset into multiple subsets 
+# (called "folds") and training the model on different combinations of these subsets. This helps to reduce overfitting 
+# and provides a more reliable estimate of model performance.
+# A typical value is 5 or 10 folds, but you can set it to any integer based on the size of the dataset and your computational resources.
+# The technique will be used only for "train" and "valid" splits.
+# Note: The computational cost will increase significantly because multiple models will need to be trained for each fold.
+# Ensure sufficient computational resources before enabling cross-validation.
+cross_validation: 5
+
+# segmentation: Defines the type of segmentation to perform.
+# - "semantic": Semantic segmentation, where each pixel is classified into a predefined class. This type of segmentation
+#   groups pixels with similar characteristics into classes such as "car", "person", "building", etc.
+# - "instance": Instance segmentation, which not only labels each pixel but also differentiates between separate objects of the same class. 
+#   For example, it would distinguish between two cars in the same image.
+segmentation: semantic
+
+# models: Specifies the model(s) to use for the segmentation task.
+models: unet
+
+# metric: Defines the evaluation metric to use for the segmentation task and select the best model.
+# - "dice_score": It measures the overlap between the predicted segmentation and the ground truth, where a higher value indicates 
+# better performance. Dice score ranges from 0 to 1, where 1 means perfect overlap.
+# - "iou": It calculates the intersection area divided by the union of the predicted and true areas. It is also used widely 
+# in object detection tasks.
+segmentation_metric: dice_score
+
+# batch_size: Specifies the number of samples that will be processed together in one iteration during model training.
+# A larger batch size speeds up training (to some extent) but requires more memory, while a smaller batch size might increase training time 
+# but reduces memory usage. Recommended to experiment based on your hardware and dataset size
+batch_size: 8
+
+# epochs: Defines the number of times the entire dataset will be passed through the model during training.
+# Increasing the number of epochs generally leads to better model performance, but it also increases the training time.
+# Too many epochs might cause overfitting, so it's recommended to monitor performance and adjust accordingly.
+epochs: 100
+
+# background: Specifies the class label for background pixels in the segmentation task. 
+# For example, if the model is performing semantic segmentation on an image, background pixels would be assigned this label.
+# If no background is provided, it is assumed that no background class exists in the dataset and won't be ignored when calculating the metrics.
+background: 3
+
+# verbose: If set to true, this flag enables more detailed logging during the training and validation phases.
+# It provides useful information about the model’s training progress, performance on the validation set, and any issues during the process.
+# Defaults to false for reduced output.
+verbose: true

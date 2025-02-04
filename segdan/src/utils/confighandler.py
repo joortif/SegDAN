@@ -1,5 +1,6 @@
 import json
 import os
+import yaml
 
 class ConfigHandler():
 
@@ -13,7 +14,7 @@ class ConfigHandler():
         "stratification",
         "segmentation", 
         "models", 
-        "metric", 
+        "segmentation_metric", 
         "batch_size", 
         "epochs",
         "verbose"
@@ -24,18 +25,22 @@ class ConfigHandler():
         "embedding_frameworks": ["huggingface", "pytorch", "tensorflow", "opencv"],
         "clustering_models": ["kmeans", "agglomerative", "dbscan", "optics"],
         "linkages" : ['ward', 'complete', 'average', 'single'],
-        "visualization_method": ["pca", "tsne"],
+        "visualization_techniques": ["pca", "tsne"],
 
-        "kmeans_clustering_metric": ["elbow", "silhouette", "calisnki", "davies"],
-        "clustering_metric": ["silhouette", "calisnki", "davies"],
+        "lbp_methods": ["uniform", "default", "ror", "nri_uniform", "var"],
+
+        "kmeans_clustering_metric": ["elbow", "silhouette", "calinski", "davies"],
+        "clustering_metric": ["silhouette", "calinski", "davies"],
         "reduction_type": ["representative", "diverse", "random"],
+        "reduction_models": ["best_model", "kmeans", "agglomerative", "dbscan", "optics"],
 
         "stratification_type": ["pixel_prop", "num_objects", "ratio"],
 
         "segmentation": ["semantic", "instance"],
         "semantic_segmentation_models": ["unet", "deeplabv3"],
         "instance_segmentation_models": ["yolo"],
-        "segmentation_metric": ["iou", "dice_score"]
+        "segmentation_metric": ["iou", "dice_score"],
+        "stratification_types": ["pixels", "objects", "pixel_to_object_ratio"]
     }
 
     DEFAULT_VALUES = {
@@ -47,7 +52,11 @@ class ConfigHandler():
         "random_state": 123,
         "clustering_metric": "silhouette",
         "plot": True,
-        "diverse_percentage": 0
+        "visualization_technique": "pca",
+        "diverse_percentage": 0.0,
+        "depth_model": "Intel/dpt-swinv2-tiny-256",
+        "threshold": 255,
+        "stratification_type": "pixels"
     }
 
     @staticmethod
@@ -98,21 +107,57 @@ class ConfigHandler():
             return values
         
         raise ValueError(f"Cannot generate range for '{param_name}'.")
+    
+    @staticmethod
+    def validate_and_convert_color_dict(color_dict):
+        if not isinstance(color_dict, dict):
+            raise ValueError("'color_dict' must be a dictionary where keys are color lists as strings and values are integer labels.")
+
+        converted_color_dict = {}
+
+        for color_key, label in color_dict.items():
+            try:
+                color_tuple = tuple(map(int, color_key.strip("[]").split(",")))
+
+                if len(color_tuple) != 3 or not all(0 <= c <= 255 for c in color_tuple):
+                    raise ValueError(f"Invalid color '{color_key}'. Must be a list of three integers in the range [0, 255].")
+
+                if not isinstance(label, int) or label <= 0:
+                    raise ValueError(f"Invalid label '{label}' for color '{color_key}'. Must be a positive integer.")
+
+                converted_color_dict[color_tuple] = label
+
+            except ValueError:
+                raise ValueError(f"Invalid color format '{color_key}'. Colors must be in the format '[R,G,B]' with integer values.")
+
+        return converted_color_dict
+    
+    @staticmethod
+    def load_config_file(file_path:str):
+        if not os.path.exists(file_path):
+            raise FileNotFoundError(f"File {file_path} does not exist.")
+        
+        if not os.path.isfile(file_path):
+            raise ValueError(f"File {file_path} is not valid.")
+        
+        file_extension = file_path.lower().split('.')[-1]
+
+        try:
+            with open(file_path, "r", encoding="utf-8") as f:
+                if file_extension == "json":
+                    data = json.load(f)
+                elif file_extension == "yaml" or file_extension == "yml":
+                    data = yaml.safe_load(f)
+                else:
+                    raise ValueError(f"File {file_path} is neither a valid JSON nor YAML file.")
+                
+        except (json.JSONDecodeError, yaml.YAMLError) as e:
+            raise ValueError(f"File {file_path} does not have a valid format. Error: {str(e)}")
+
+        return ConfigHandler.read_config(data)
 
     @staticmethod
-    def read_config(json_path: str):
-
-        if not os.path.exists(json_path):
-            raise FileNotFoundError(f"File {json_path} does not exist.")
-        
-        if not os.path.isfile(json_path):
-            raise ValueError(f"File {json_path} is not valid.")
-
-        try: 
-            with open(json_path, "r", encoding="utf-8") as f:
-                data = json.load(f)
-        except json.JSONDecodeError:
-            raise ValueError(f"File {json_path} does not have a valid JSON format.")
+    def read_config(data: dict):
         
         for key in ConfigHandler.REQUIRED_KEYS:
             if key not in data:
@@ -136,8 +181,8 @@ class ConfigHandler():
         if not isinstance(data["analyze"], bool):
             raise ValueError(f"The value of 'analyze' must be an boolean (true or false), but got {type(data['analyze'])}.")
         
-        if "cluster_images" in data:
-            if data.get("embedding_frameworks") not in ConfigHandler.CONFIGURATION_VALUES["embedding_frameworks"]:
+        if data.get("cluster_images"):
+            if not all(fw in ConfigHandler.CONFIGURATION_VALUES["embedding_frameworks"] for fw in data.get("embedding_frameworks", [])):
                 raise ValueError(f"Invalid embedding frameworks. Must be one of: {ConfigHandler.CONFIGURATION_VALUES['embedding_frameworks']}.")
             
             if "huggingface" in data["embedding_frameworks"] and "models_huggingface" not in data:
@@ -148,6 +193,12 @@ class ConfigHandler():
             
             if "tensorflow" in data["embedding_frameworks"] and "models_tensorflow" not in data:
                 raise ValueError(f"When 'tensorflow' is selected in 'embedding_frameworks', a list of models must be specified under 'models_tensorflow'.")
+            
+            for framework in ConfigHandler.CONFIGURATION_VALUES["embedding_frameworks"]:
+                if framework not in data["embedding_frameworks"]:
+                    model_key = f"models_{framework}"
+                    if model_key in data:
+                        raise ValueError(f"Models for '{framework}' should not be specified unless '{framework}' is included in 'embedding_frameworks'.")
             
             if any(framework in data["embedding_frameworks"] for framework in ["tensorflow", "opencv"]):
                 if "resize_height" not in data:
@@ -178,8 +229,8 @@ class ConfigHandler():
                 if "lbp_method" not in data:
                     print(f"LBP method not detected for OpenCV LBP embedding model. Using default method of {ConfigHandler.DEFAULT_VALUES['lbp_method']}.")
                     data['lbp_method'] = ConfigHandler.DEFAULT_VALUES['lbp_method']
-                elif data.get('lbp_method') not in ConfigHandler.CONFIGURATION_VALUES['lbp_method']:
-                    raise ValueError(f"The value of 'lbp_method' must be one of {ConfigHandler.CONFIGURATION_VALUES['lbp_method']}, but got {data['lbp_method']}.")
+                elif data.get("lbp_method") not in ConfigHandler.CONFIGURATION_VALUES['lbp_methods']:
+                    raise ValueError(f"The value of 'lbp_method' must be one of {ConfigHandler.CONFIGURATION_VALUES['lbp_methods']}, but got {data['lbp_method']}.")
 
             if "clustering_models" not in data:
                 raise ValueError(f"Clustering models configuration is missing.")
@@ -195,6 +246,7 @@ class ConfigHandler():
                     
                     if "random_state" not in params:
                         print(f"Random_state not detected for KMeans clustering model. Using default random_state of {ConfigHandler.DEFAULT_VALUES['random_state']}")
+                        data["clustering_models"][model]["random_state"] = ConfigHandler.DEFAULT_VALUES['random_state']
 
                     if "n_clusters_range" in params:
                         data["clustering_models"][model]["n_clusters_range"] = ConfigHandler.validate_range(params["n_clusters_range"], "n_clusters_range")
@@ -208,7 +260,7 @@ class ConfigHandler():
                         raise ValueError(f"You need to provide 'linkage' for the {model} model.")
                                         
                     if params.get("linkage") not in ConfigHandler.CONFIGURATION_VALUES["linkages"]:
-                        raise ValueError(f"Invalid linkage '{params["linkage"]}'. Must be one (or more) of {ConfigHandler.CONFIGURATION_VALUES['linkages']}.")
+                        raise ValueError(f"Invalid linkage '{params['linkage']}'. Must be one (or more) of {ConfigHandler.CONFIGURATION_VALUES['linkages']}.")
                     
                     if "n_clusters_range" in params:
                         data["clustering_models"][model]["n_clusters_range"] = ConfigHandler.validate_range(params["n_clusters_range"], "n_clusters_range")
@@ -237,7 +289,6 @@ class ConfigHandler():
             selected_models = list(data["clustering_models"].keys())
 
             clustering_metric = data["clustering_metric"]
-
             valid_metrics = ConfigHandler.CONFIGURATION_VALUES["clustering_metric"]  
 
             if "kmeans" in selected_models and len(selected_models) == 1:
@@ -252,8 +303,12 @@ class ConfigHandler():
 
             if not isinstance(data["plot"], bool):
                 raise ValueError(f"The value of 'plot' must be an boolean (true or false), but got {type(data['plot'])}.")
+            
+            if data["plot"] and data.get("visualization_technique") not in ConfigHandler.CONFIGURATION_VALUES['visualization_techniques']:
+                print(f"Visualization technique not detected when plot is set to True. Using default technique of {ConfigHandler.DEFAULT_VALUES['visualization_technique']}")
+                data["visualization_technique"] = ConfigHandler.DEFAULT_VALUES['visualization_technique']
         
-        if "reduction" in data:
+        if data.get("reduction"):
 
             if "reduction_percentage" not in data:
                 raise ValueError(f"When 'reduction' is selected, a reduction percentage must be specified under 'reduction_percentage'.")
@@ -268,9 +323,106 @@ class ConfigHandler():
                 print(f"Diverse percentage not detected for reduction. Using default diverse percentage of {ConfigHandler.DEFAULT_VALUES['diverse_percentage']}")
                 data["diverse_percentage"] = ConfigHandler.DEFAULT_VALUES['diverse_percentage']
 
-            if data.get("reduction_model") not in ConfigHandler.CONFIGURATION_VALUES["clustering_models"]:
-                 
+            if not isinstance(data["diverse_percentage"], float): 
+                raise ValueError(f"The value of 'diverse_percentage' must be a float, but got {type(data['diverse_percentage'])}.")
         
+            if data.get("reduction_model"):
+                if isinstance(data["reduction_model"], str):
+                    if data["reduction_model"] != "best_model":
+                        raise ValueError(f"Invalid reduction model '{data['reduction_model']}'. Must be 'best_model'.")
+
+                    if not data.get("cluster_images", False):
+                        raise ValueError("'best_model' can only be used when 'cluster_images' is set to True.")
+                
+                elif isinstance(data["reduction_model"], dict):
+                    model_keys = list(data["reduction_model"].keys())
+
+                    if len(model_keys) != 1:
+                        raise ValueError(f"The 'reduction_model' dictionary must contain exactly one model from {ConfigHandler.CONFIGURATION_VALUES['clustering_models']}.")
+
+                    selected_model = model_keys[0]
+
+                    if selected_model not in ConfigHandler.CONFIGURATION_VALUES["clustering_models"]:
+                        raise ValueError(f"Invalid reduction model '{selected_model}'. Must be one of: {ConfigHandler.CONFIGURATION_VALUES['clustering_models']}.")
+                    
+                    model_params = data["reduction_model"][selected_model]
+
+                    if not isinstance(data["reduction_model"][selected_model], dict):
+                        raise ValueError(f"The parameters for '{selected_model}' must be provided as a dictionary.")
+                    
+                    if selected_model == "kmeans":
+                        if "n_clusters" not in model_params or not isinstance(model_params["n_clusters"], int) or model_params["n_clusters"] <= 0:
+                            raise ValueError("KMeans requires a positive integer 'n_clusters' parameter.")
+                        if "random_state" in model_params and not isinstance(model_params["random_state"], int):
+                            print(f"The 'random_state' parameter for KMeans must be an integer. Using default random_state of {ConfigHandler.DEFAULT_VALUES['random_state']}")
+                            data["clustering_models"][model]["random_state"] = ConfigHandler.DEFAULT_VALUES['random_state']
+
+                    elif selected_model == "agglomerative":
+                        if "n_clusters" not in model_params or not isinstance(model_params["n_clusters"], int) or model_params["n_clusters"] <= 0:
+                            raise ValueError("Agglomerative clustering requires a positive integer 'n_clusters' parameter.")
+                        if "linkage" not in model_params or model_params["linkage"] not in ConfigHandler.CONFIGURATION_VALUES["linkages"]:
+                            raise ValueError(f"Invalid 'linkage' parameter for Agglomerative clustering. Must be one of: {ConfigHandler.CONFIGURATION_VALUES['linkages']}.")
+
+                    elif selected_model == "dbscan":
+                        if "eps" not in model_params or not isinstance(model_params["eps"], (int, float)) or model_params["eps"] <= 0:
+                            raise ValueError("DBSCAN requires a positive 'eps' parameter.")
+                        if "min_samples" not in model_params or not isinstance(model_params["min_samples"], int) or model_params["min_samples"] <= 0:
+                            raise ValueError("DBSCAN requires a positive integer 'min_samples' parameter.")
+
+                    elif selected_model == "optics":
+                        if "min_samples" not in model_params or not isinstance(model_params["min_samples"], int) or model_params["min_samples"] <= 0:
+                            raise ValueError("OPTICS requires a positive integer 'min_samples' parameter.")
+                            
+                else:
+                    raise ValueError("The 'reduction_model' must be either a string ('best_model') if cluster_images is True or a dictionary with one clustering model and its parameters if cluster_iamges is False.")
+        
+        if "depth_model" not in data:
+            print(f"Depth model for YOLO/COCO label transformation not defined. The default model {ConfigHandler.DEFAULT_VALUES['depth_model']} from HuggingFace will be used if needed.")
+            data["depth_model"] = ConfigHandler.DEFAULT_VALUES['depth_model']
+
+        if not isinstance(data["depth_model"], str):
+            raise ValueError(f"The value of 'depth_model' must be a string, but got {type(data['depth_model'])}.")
+        
+        if "threshold" not in data:
+            print(f"Threshold for binary label transformation not defined. The default threshold {ConfigHandler.DEFAULT_VALUES['threshold']} will be used if needed.")
+            data["threshold"] = ConfigHandler.DEFAULT_VALUES['threshold']
+
+        if not isinstance(data["threshold"], int):
+            raise ValueError(f"The value of 'threshold' must be an integer, but got {type(data['threshold'])}.")
+        
+        if "color_dict" not in data:
+            print(f"Color dictionary for multicolor label transformation not defined. It will be calculated automatically if needed.")
+        else: 
+            data["color_dict"] = ConfigHandler.validate_and_convert_color_dict(data["color_dict"])
+
+        if not isinstance(data["split_percentages"], dict):
+            raise ValueError("'split_percentages' must be a dictionary with keys 'train', 'valid', and 'test'.")
+
+        required_keys = {"train", "valid", "test"}
+        if set(data["split_percentages"].keys()) != required_keys:
+            raise ValueError(f"'split_percentages' must contain exactly the keys: {required_keys}.")
+
+        if not all(isinstance(data["split_percentages"][key], float) for key in required_keys):
+            raise ValueError("'split_percentages' values must all be floats.")
+
+        if not all(0 <= data["split_percentages"][key] <= 1 for key in required_keys):
+            raise ValueError("Each 'split_percentages' value must be between 0 and 1.")
+
+        if round(sum(data["split_percentages"].values()), 10) != 1.0:
+            raise ValueError("The sum of 'train', 'valid', and 'test' split percentages must be exactly 1.0.")
+
+        if data.get("stratification") and data.get("stratification_type") not in ConfigHandler.CONFIGURATION_VALUES['stratification_types']:
+            print(f"Invalid stratification_type selected. Must be one of: {ConfigHandler.CONFIGURATION_VALUES['stratification_types']}. Selected default value of {ConfigHandler.DEFAULT_VALUES['stratification_type']}")
+            data["stratification_type"] = ConfigHandler.DEFAULT_VALUES['stratification_type']
+
+        if "cross_validation" in data:
+            if not isinstance(data["cross_validation"], int):
+                raise ValueError("'cross_validation' must be an integer.")
+            if data["cross_validation"] < 0:
+                raise ValueError("'cross_validation' must be greater than or equal to 0.")
+            if data["cross_validation"] > 0 and ("train" not in data["split_percentages"] or "valid" not in data["split_percentages"] or "test" not in data["split_percentages"]):
+                raise ValueError("When cross-validation is enabled,'train', 'valid' and 'test' splits must be provided in 'split_percentages'.")    
+
         if data.get("segmentation") not in ConfigHandler.CONFIGURATION_VALUES["segmentation"]:
             raise ValueError(f"Invalid segmentation type. Must be one of: {ConfigHandler.CONFIGURATION_VALUES['segmentation']}.")
         
@@ -280,8 +432,8 @@ class ConfigHandler():
         if data["segmentation"] == "instance" and data.get('models') not in ConfigHandler.CONFIGURATION_VALUES["instance_segmentation_models"]:
             raise ValueError(f"Invalid instance segmentation model. Must be of: {ConfigHandler.CONFIGURATION_VALUES['instance_segmentation_models']}.")
         
-        if data.get("metric") not in ConfigHandler.CONFIGURATION_VALUES["metric"]:
-            raise ValueError(f"Invalid evaluation metric. Must be one of {ConfigHandler.CONFIGURATION_VALUES['metric']}-")
+        if data.get("segmentation_metric") not in ConfigHandler.CONFIGURATION_VALUES["segmentation_metric"]:
+            raise ValueError(f"Invalid evaluation metric. Must be one of {ConfigHandler.CONFIGURATION_VALUES['segmentation_metric']}.")
         
         if not isinstance(data["batch_size"], int): 
             raise ValueError(f"The value of 'batch_size' must be an integer, but got {type(data['batch_size'])}.")
@@ -293,6 +445,9 @@ class ConfigHandler():
             raise ValueError(f"The value of 'background' must be an integer, but got {type(data['background'])}.")
         
         if not isinstance(data["verbose"], bool):
-            raise ValueError(f"The value of 'verbose' must be an boolean (true or false), but got {type(data['verbose'])}.")
+            raise ValueError(f"The value of 'verbose' must be a boolean (true or false), but got {type(data['verbose'])}.")
         
+        if data["verbose"]:
+            print("Successfully loaded data from config file.")
+
         return data
