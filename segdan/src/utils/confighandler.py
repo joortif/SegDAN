@@ -1,6 +1,7 @@
 import json
 import os
 import yaml
+import numpy as np
 
 class ConfigHandler():
 
@@ -22,7 +23,7 @@ class ConfigHandler():
 
 
     CONFIGURATION_VALUES = {
-        "embedding_frameworks": ["huggingface", "pytorch", "tensorflow", "opencv"],
+        "frameworks": ["huggingface", "pytorch", "tensorflow", "opencv"],
         "clustering_models": ["kmeans", "agglomerative", "dbscan", "optics"],
         "linkages" : ['ward', 'complete', 'average', 'single'],
         "visualization_techniques": ["pca", "tsne"],
@@ -56,7 +57,9 @@ class ConfigHandler():
         "diverse_percentage": 0.0,
         "depth_model": "Intel/dpt-swinv2-tiny-256",
         "threshold": 255,
-        "stratification_type": "pixels"
+        "stratification_type": "pixels",
+        "binary": False,
+        "include_outliers": False
     }
 
     @staticmethod
@@ -96,15 +99,10 @@ class ConfigHandler():
         step = range_params["step"]
         
         if isinstance(start, int) and isinstance(stop, int) and isinstance(step, int):
-            return list(range(start, stop + 1, step))
+            return range(start, stop + 1, step)
         
         elif isinstance(start, (int, float)) and isinstance(stop, (int, float)) and isinstance(step, (int, float)):
-            values = []
-            current = start
-            while current <= stop:
-                values.append(round(current, 10))  
-                current += step
-            return values
+            return np.arange(start, stop + step, step)
         
         raise ValueError(f"Cannot generate range for '{param_name}'.")
     
@@ -122,7 +120,7 @@ class ConfigHandler():
                 if len(color_tuple) != 3 or not all(0 <= c <= 255 for c in color_tuple):
                     raise ValueError(f"Invalid color '{color_key}'. Must be a list of three integers in the range [0, 255].")
 
-                if not isinstance(label, int) or label <= 0:
+                if not isinstance(label, int) or label < 0:
                     raise ValueError(f"Invalid label '{label}' for color '{color_key}'. Must be a positive integer.")
 
                 converted_color_dict[color_tuple] = label
@@ -182,55 +180,48 @@ class ConfigHandler():
             raise ValueError(f"The value of 'analyze' must be an boolean (true or false), but got {type(data['analyze'])}.")
         
         if data.get("cluster_images"):
-            if not all(fw in ConfigHandler.CONFIGURATION_VALUES["embedding_frameworks"] for fw in data.get("embedding_frameworks", [])):
-                raise ValueError(f"Invalid embedding frameworks. Must be one of: {ConfigHandler.CONFIGURATION_VALUES['embedding_frameworks']}.")
+            if not data.get("embedding_model"): 
+                raise ValueError(f"When ")
             
-            if "huggingface" in data["embedding_frameworks"] and "models_huggingface" not in data:
-                raise ValueError(f"When 'huggingface' is selected in 'embedding_frameworks', a list of models must be specified under 'models_huggingface'.")
-            
-            if "pytorch" in data["embedding_frameworks"] and "models_pytorch" not in data:
-                raise ValueError(f"When 'pytorch' is selected in 'embedding_frameworks', a list of models must be specified under 'models_pytorch'.")
-            
-            if "tensorflow" in data["embedding_frameworks"] and "models_tensorflow" not in data:
-                raise ValueError(f"When 'tensorflow' is selected in 'embedding_frameworks', a list of models must be specified under 'models_tensorflow'.")
-            
-            for framework in ConfigHandler.CONFIGURATION_VALUES["embedding_frameworks"]:
-                if framework not in data["embedding_frameworks"]:
-                    model_key = f"models_{framework}"
-                    if model_key in data:
-                        raise ValueError(f"Models for '{framework}' should not be specified unless '{framework}' is included in 'embedding_frameworks'.")
-            
-            if any(framework in data["embedding_frameworks"] for framework in ["tensorflow", "opencv"]):
-                if "resize_height" not in data:
-                    print(f"Resize height not detected for {', '.join([framework for framework in ['tensorflow', 'opencv'] if framework in data['embedding_frameworks']])} model(s). Using default resize height of {ConfigHandler.DEFAULT_VALUES['resize_height']}.")
-                    data['resize_height'] = ConfigHandler.DEFAULT_VALUES['resize_height']
-                elif not isinstance(data["resize_height"], int):
-                    raise ValueError(f"The value of 'resize_height' must be an integer, but got {type(data['resize_height'])}.")
+            embedding_model = data["embedding_model"]
 
-                if "resize_width" not in data:
-                    print(f"Resize width not detected for {', '.join([framework for framework in ['tensorflow', 'opencv'] if framework in data['embedding_frameworks']])} model(s). Using default resize width of {ConfigHandler.DEFAULT_VALUES['resize_width']}.")
-                    data['resize_width'] = ConfigHandler.DEFAULT_VALUES['resize_width']
-                elif not isinstance(data["resize_width"], int):
-                    raise ValueError(f"The value of 'resize_width' must be an integer, but got {type(data['resize_width'])}.")
-                
-            if "opencv" in data["embedding_frameworks"]:
-                if "lbp_radius" not in data:
-                    print(f"Radius not detected for OpenCV LBP embedding model. Using default radius of {ConfigHandler.DEFAULT_VALUES['lbp_radius']}.")
-                    data['lbp_radius'] = ConfigHandler.DEFAULT_VALUES['lbp_radius']
-                elif not isinstance(data['lbp_radius'], int):
-                    raise ValueError(f"The value of 'lbp_radius' must be an integer, but got {type(data['lbp_radius'])}.")
-                
-                if "lbp_num_points" not in data:
-                    print(f"Number of points not detected for OpenCV LBP embedding model. Using default number of points of {ConfigHandler.DEFAULT_VALUES['lbp_num_points']}.")
-                    data['lbp_num_points'] = ConfigHandler.DEFAULT_VALUES['lbp_num_points']
-                elif not isinstance(data['lbp_num_points'], int):
-                    raise ValueError(f"The value of 'lbp_num_points' must be an integer, but got {type(data['lbp_num_points'])}.")
+            if embedding_model.get("framework") not in ConfigHandler.CONFIGURATION_VALUES['frameworks']:
+                raise ValueError(f"Invalid embedding framework '{embedding_model.get('framework')}'. Must be one of: {ConfigHandler.CONFIGURATION_VALUES['frameworks']}.")
+            
+            if embedding_model.get("framework") != "opencv" and not embedding_model.get("name"):
+                raise ValueError(f"A model 'name' must be specified for framework '{embedding_model.get('framework')}'.")
+            
+            if embedding_model.get("framework") in ["tensorflow", "opencv"]:
+                if "resize_height" not in embedding_model:
+                    print(f"Resize height not detected for '{embedding_model.get('framework')}'. Using default value of {ConfigHandler.DEFAULT_VALUES['resize_height']}.")
+                    embedding_model["resize_height"] = ConfigHandler.DEFAULT_VALUES["resize_height"]
+                elif not isinstance(embedding_model["resize_height"], int):
+                    raise ValueError(f"The value of 'resize_height' must be an integer, but got {type(embedding_model['resize_height'])}.")
 
-                if "lbp_method" not in data:
-                    print(f"LBP method not detected for OpenCV LBP embedding model. Using default method of {ConfigHandler.DEFAULT_VALUES['lbp_method']}.")
-                    data['lbp_method'] = ConfigHandler.DEFAULT_VALUES['lbp_method']
-                elif data.get("lbp_method") not in ConfigHandler.CONFIGURATION_VALUES['lbp_methods']:
-                    raise ValueError(f"The value of 'lbp_method' must be one of {ConfigHandler.CONFIGURATION_VALUES['lbp_methods']}, but got {data['lbp_method']}.")
+                if "resize_width" not in embedding_model:
+                    print(f"Resize width not detected for '{embedding_model.get('framework')}'. Using default value of {ConfigHandler.DEFAULT_VALUES['resize_width']}.")
+                    embedding_model["resize_width"] = ConfigHandler.DEFAULT_VALUES["resize_width"]
+                elif not isinstance(embedding_model["resize_width"], int):
+                    raise ValueError(f"The value of 'resize_width' must be an integer, but got {type(embedding_model['resize_width'])}.")
+
+            if embedding_model.get("framework") == "opencv":
+                if "lbp_radius" not in embedding_model:
+                    print(f"LBP radius not detected for OpenCV. Using default value of {ConfigHandler.DEFAULT_VALUES['lbp_radius']}.")
+                    embedding_model["lbp_radius"] = ConfigHandler.DEFAULT_VALUES["lbp_radius"]
+                elif not isinstance(embedding_model["lbp_radius"], int):
+                    raise ValueError(f"The value of 'lbp_radius' must be an integer, but got {type(embedding_model['lbp_radius'])}.")
+
+                if "lbp_num_points" not in embedding_model:
+                    print(f"LBP num_points not detected for OpenCV. Using default value of {ConfigHandler.DEFAULT_VALUES['lbp_num_points']}.")
+                    embedding_model["lbp_num_points"] = ConfigHandler.DEFAULT_VALUES["lbp_num_points"]
+                elif not isinstance(embedding_model["lbp_num_points"], int):
+                    raise ValueError(f"The value of 'lbp_num_points' must be an integer, but got {type(embedding_model['lbp_num_points'])}.")
+
+                if "lbp_method" not in embedding_model:
+                    print(f"LBP method not detected for OpenCV. Using default value of {ConfigHandler.DEFAULT_VALUES['lbp_method']}.")
+                    embedding_model["lbp_method"] = ConfigHandler.DEFAULT_VALUES["lbp_method"]
+                elif embedding_model["lbp_method"] not in ConfigHandler.CONFIGURATION_VALUES["lbp_methods"]:
+                    raise ValueError(f"Invalid 'lbp_method'. Must be one of {ConfigHandler.CONFIGURATION_VALUES['lbp_methods']}, but got '{embedding_model['lbp_method']}'.")
 
             if "clustering_models" not in data:
                 raise ValueError(f"Clustering models configuration is missing.")
@@ -253,17 +244,23 @@ class ConfigHandler():
 
                 elif model == "agglomerative":
 
-                    if "n_clusters_range" in params and "n_clusters" in params:
+                    if params.get("n_clusters_range") and params.get("n_clusters"):
                         raise ValueError(f"Model '{model}' cannot have both 'n_clusters_range' and 'n_clusters' defined.")
                     
-                    if not "linkage" in params:
-                        raise ValueError(f"You need to provide 'linkage' for the {model} model.")
+                    if params.get("n_clusters"):
+                        
+                        if params.get("linkages"):
+                            raise ValueError(f"Only one linkage is allowed when using agglomerative clustering without grid search.")
                                         
-                    if params.get("linkage") not in ConfigHandler.CONFIGURATION_VALUES["linkages"]:
-                        raise ValueError(f"Invalid linkage '{params['linkage']}'. Must be one (or more) of {ConfigHandler.CONFIGURATION_VALUES['linkages']}.")
+                        if params.get("linkage") not in ConfigHandler.CONFIGURATION_VALUES["linkages"]:
+                            raise ValueError(f"Invalid linkage '{params['linkage']}'. Must be one (or more) of {ConfigHandler.CONFIGURATION_VALUES['linkages']}.")
                     
-                    if "n_clusters_range" in params:
+                    if params.get("n_clusters_range"):
+
                         data["clustering_models"][model]["n_clusters_range"] = ConfigHandler.validate_range(params["n_clusters_range"], "n_clusters_range")
+
+                        if not all(linkage in ConfigHandler.CONFIGURATION_VALUES["linkages"] for linkage in params.get("linkages", [])):
+                            raise ValueError(f"Invalid linkage '{params['linkages']}'. Must be one (or more) of {ConfigHandler.CONFIGURATION_VALUES['linkages']}.")
 
                 elif model == "dbscan":
                     if ("eps" in params or "min_samples" in params) and ("eps_range" in params or "min_samples_range" in params):
@@ -325,7 +322,14 @@ class ConfigHandler():
 
             if not isinstance(data["diverse_percentage"], float): 
                 raise ValueError(f"The value of 'diverse_percentage' must be a float, but got {type(data['diverse_percentage'])}.")
+            
+            if not data.get("include_outliers", None):
+                print(f"Parameter include_outliers not detected for reduction. Using default value of include_outliers to {ConfigHandler.DEFAULT_VALUES['include_outliers']}")
+                data['include_outliers'] = ConfigHandler.DEFAULT_VALUES['include_outliers']
         
+            if not isinstance(data["include_outliers"], bool): 
+                raise ValueError(f"The value of 'include_outliers' must be a bool, but got {type(data['include_outliers'])}.")
+            
             if data.get("reduction_model"):
                 if isinstance(data["reduction_model"], str):
                     if data["reduction_model"] != "best_model":
@@ -392,6 +396,7 @@ class ConfigHandler():
         
         if "color_dict" not in data:
             print(f"Color dictionary for multicolor label transformation not defined. It will be calculated automatically if needed.")
+            data["color_dict"] = None
         else: 
             data["color_dict"] = ConfigHandler.validate_and_convert_color_dict(data["color_dict"])
 
@@ -426,22 +431,32 @@ class ConfigHandler():
         if data.get("segmentation") not in ConfigHandler.CONFIGURATION_VALUES["segmentation"]:
             raise ValueError(f"Invalid segmentation type. Must be one of: {ConfigHandler.CONFIGURATION_VALUES['segmentation']}.")
         
-        if data["segmentation"] == "semantic" and data.get('models') not in ConfigHandler.CONFIGURATION_VALUES["semantic_segmentation_models"]: 
+        if not data.get("binary", False): 
+            print(f"'Binary' flag not detected. The default value of {ConfigHandler.DEFAULT_VALUES['binary']} will be used.")
+            data["binary"] = ConfigHandler.DEFAULT_VALUES['binary']
+
+        if data["segmentation"] == "semantic" and not all(model in ConfigHandler.CONFIGURATION_VALUES["semantic_segmentation_models"] for model in params.get("semantic_segmentation_models", [])): 
             raise ValueError(f"Invalid semantic segmentation model. Must be one of: {ConfigHandler.CONFIGURATION_VALUES['semantic_segmentation_models']}.")
         
-        if data["segmentation"] == "instance" and data.get('models') not in ConfigHandler.CONFIGURATION_VALUES["instance_segmentation_models"]:
+        if data["segmentation"] == "instance" and not all(model in ConfigHandler.CONFIGURATION_VALUES["instance_segmentation_models"] for model in params.get("instance_segmentation_models", [])):
             raise ValueError(f"Invalid instance segmentation model. Must be of: {ConfigHandler.CONFIGURATION_VALUES['instance_segmentation_models']}.")
         
         if data.get("segmentation_metric") not in ConfigHandler.CONFIGURATION_VALUES["segmentation_metric"]:
             raise ValueError(f"Invalid evaluation metric. Must be one of {ConfigHandler.CONFIGURATION_VALUES['segmentation_metric']}.")
         
+        if not isinstance(data["binary"], bool):
+            raise ValueError(f"The value of 'binary' must be a boolean (true or false), but got {type(data['binary'])}.")
+
         if not isinstance(data["batch_size"], int): 
             raise ValueError(f"The value of 'batch_size' must be an integer, but got {type(data['batch_size'])}.")
         
         if not isinstance(data["epochs"], int): 
             raise ValueError(f"The value of 'epochs' must be an integer, but got {type(data['epochs'])}.")
         
-        if not isinstance(data["background"], int): 
+        if not data.get("background"):
+            print("Background class not provided. It is assumed that no background class exists in labels and all pixels belong to a class.")
+            data["background"] = None
+        if not isinstance(data["background"], int | None): 
             raise ValueError(f"The value of 'background' must be an integer, but got {type(data['background'])}.")
         
         if not isinstance(data["verbose"], bool):

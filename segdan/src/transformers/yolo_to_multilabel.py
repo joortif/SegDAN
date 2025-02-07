@@ -25,7 +25,7 @@ class YOLOToMultilabelTransformer(Transformer):
 
             return annotations
 
-    def transform(self, input_data: str, output_dir: str, img_path: str, fill_background: int | None, depth_model: str ="Intel/dpt-swinv2-tiny-256"):
+    def transform(self, input_data: str, output_dir: str, img_dir: str, fill_background: int | None, depth_model: str ="Intel/dpt-swinv2-tiny-256"):
         
         os.makedirs(output_dir, exist_ok=True)
 
@@ -40,7 +40,7 @@ class YOLOToMultilabelTransformer(Transformer):
 
             objects = self._read_yolo(label_path)
 
-            image_path = ImageLabelUtils.label_to_image(label_path, img_path, LabelExtensions.JPG.value)
+            image_path = ImageLabelUtils.label_to_image(label_path, img_dir, LabelExtensions.JPG.value)
 
             depth_map = depth_estimator.generate_depth_map(image_path)
 

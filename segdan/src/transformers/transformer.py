@@ -31,5 +31,5 @@ class Transformer():
         return polygon
     
     
-    def transform(self, input_data: str, output_dir: str):
-        pass
+    def transform(self, input_data: str, output_dir: str, **kwargs):
+        raise NotImplementedError("Subclasses must implement this method")

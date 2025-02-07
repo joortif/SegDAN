@@ -1,12 +1,13 @@
-#Example configuration file for SegDAN
-
+####################################
 # DATASET CONFIGURATION
+####################################
+
 # dataset_path: Path to the directory containing the images and optionally their corresponding labels. 
 # The directory must have subdirectories "/images" for the images and "/labels" for the labels.
-dataset_path: C:/Users/joortif/Desktop/datasets/Completos/melanoma_3c/train
+dataset_path: C:/Users/joortif/Desktop/datasets/Preprocesados/forest_freiburg_color/train
 
 # output_path: Path for the output and results of the program: analysis, clustering, reduction, transformation and metric comparison results.
-output_path: C:/Users/joortif/Desktop/Resultados_SegDAN/melanoma_c3
+output_path: C:/Users/joortif/Desktop/Resultados_SegDAN/forest
 
 # DATASET ANALYSIS
 # analyze: This parameter is used to perform an analysis of the image dataset and its labels.
@@ -18,78 +19,77 @@ output_path: C:/Users/joortif/Desktop/Resultados_SegDAN/melanoma_c3
 # - Metrics are calculated such as number of objects per image, object areas (avg, std, max, min), 
 #   boxplots of classes areas, bounding boxes areas (avg, std, max, min) and ellipses areas (avg, std, max, min)
 # The results will be shown and saved in output_path
-analyze: false
+analyze: true
 
+####################################
 # IMAGE EMBEDDING AND CLUSTERING
+####################################
+
 # cluster_images: This parameter allows to study the diversity and similarity of the images using different embedding models and frameworks.
 # The images will be embedded using various machine learning models and the resulting embeddings will be analyzed for clustering.
 cluster_images: true
 
-# embedding_frameworks: The user can select different frameworks to embed the images.
-# Each framework uses different pre-trained models to transform images into high-dimensional vectors (embeddings) that capture their features.
-# These embeddings can then be used for clustering, similarity analysis, or dataset reduction.
-# Options include:
-# - "huggingface": Use Hugging Face models, such as CLIP for general image representation.
-# - "pytorch": Use PyTorch models, including CNN-based models like ResNet for image feature extraction.
-# - "tensorflow": Use TensorFlow models, for image embedding tasks.
-# - "opencv": Use OpenCV Local Binary Patterns (LBP) for texture feature extraction. It is particularly useful for analyzing 
-#   texture patterns and can be applied to image clustering.
-embedding_frameworks:
-  - huggingface
-  - pytorch
-  - tensorflow
-  - opencv
-models_huggingface:
-  - openai/clip-vit-base-patch16
-models_pytorch:
-  - resnet50
-models_tensorflow:
-  - MobileNetV2
+# embedding_model: Defines the model and framework used to transform images into numerical feature vectors (embeddings).  
+# These embeddings serve as compact representations of images, allowing efficient clustering, similarity search, and other machine-learning tasks.  
+# The choice of framework and model impacts the quality, interpretability, and computational cost of embedding extraction. 
+embedding_model:
 
-# resize_height, resize_width: Resize height and width for images in the dataset to obtain the embeddings with Tensorflow models and OpenCV LBP technique. 
-# Lower values might fasten the proccess, but may also result in loss of fine details in the images.
-# Increasing the value may improve feature extraction quality but will also increase computation time.
-# Default values are 224x224.
-resize_height: 224
-resize_width: 224
+  # framework: Each framework has different pre-trained models to transform images into embeddings that capture their features.
+  # These embeddings can then be used for clustering, similarity analysis, or dataset reduction.
+  # Options include:
+  # - "huggingface": Use Hugging Face models, such as CLIP for general image representation.
+  # - "pytorch": Use PyTorch models, including CNN-based models like ResNet for image feature extraction.
+  # - "tensorflow": Use TensorFlow models, for image embedding tasks.
+  # - "opencv": Use OpenCV Local Binary Patterns (LBP) for texture feature extraction. It is particularly useful for analyzing 
+  #   texture patterns and can be applied to image clustering.
+  framework: opencv
 
-# lbp_radius: Defines the radius (in pixels) of the circular neighborhood around each pixel for calculating Local Binary Patterns (LBP). 
-# A larger radius captures more global texture information, while a smaller radius focuses on finer, local texture details. 
-# Default value to 8.
-lbp_radius: 16
+  # name: Specifies the specific model to be used within the chosen framework.  
+  # Models could include "openai/clip-vit-base-patch32" for huggingface, 
+  # "resnet50" or "efficientnet_b0" using pytorch,
+  # "mobilenet_v2" or "inception_v3" with tensorflow. 
+  #  If using "opencv", this field is not be necessary, as LBP is a predefined feature extraction method.
+  name: 
+  
+  # resize_height, resize_width: Resize height and width for images in the dataset to obtain the embeddings with Tensorflow models and OpenCV LBP technique. 
+  # Lower values might fasten the proccess, but may also result in loss of fine details in the images.
+  # Increasing the value may improve feature extraction quality but will also increase computation time.
+  # Default values are 224x224.
+  resize_height: 224
+  resize_width: 224
 
-# lbp_num_points: Specifies the number of sampling points around the central pixel for calculating the LBP. 
-# Higher values result in a more detailed and finer texture representation but also increase computational complexity. 
-# Typical values are 8, 16, and 24. Defaults to 24.
-lbp_num_points: 48
+  # lbp_radius: Defines the radius (in pixels) of the circular neighborhood around each pixel for calculating Local Binary Patterns (LBP). 
+  # A larger radius captures more global texture information, while a smaller radius focuses on finer, local texture details. 
+  # Default value to 8.
+  lbp_radius: 16
 
-# lbp_method: Specifies the method used for LBP calculation. 
-# "uniform" method assigns the LBP values to a limited number of patterns, making it more robust and less sensitive to noise, 
-# particularly useful for texture classification. Other methods are "default", "ror", "nri_uniform" or "var".
-lbp_method: uniform
+  # lbp_num_points: Specifies the number of sampling points around the central pixel for calculating the LBP. 
+  # Higher values result in a more detailed and finer texture representation but also increase computational complexity. 
+  # Typical values are 8, 16, and 24. Defaults to 24.
+  lbp_num_points: 48
+
+  # lbp_method: Specifies the method used for LBP calculation. 
+  # "uniform" method assigns the LBP values to a limited number of patterns, making it more robust and less sensitive to noise, 
+  # particularly useful for texture classification. Other methods are "default", "ror", "nri_uniform" or "var".
+  lbp_method: uniform
 
 # clustering_models: Defines the clustering model(s) to use with the beforehand calculated embeddings. 
 # The possible models are KMeans, AgglomerativeClustering, DBSCAN and OPTICS. 
 # You can either specify fixed values for the model's hyperparameters or define a range of values to perform a grid search 
 # for finding the best combination of hyperparameters.
 clustering_models:
-  
-  kmeans:
-    # n_clusters: Specifies the number of clusters to form in KMeans.
-    # Can be set to a fixed value or a range for grid search.
-    n_clusters: 5
-    
-    # random_state: Seed for random number generator to ensure reproducibility of results.
-    random_state: 123
 
   agglomerative:
     # n_clusters: Defines the number of clusters to form in AgglomerativeClustering.
     # Can be set to a fixed value or a range for grid search.
-    n_clusters: 5
+    n_clusters_range: 
+      min: 2
+      max: 5
+      step: 1
 
     # linkage: Method used to calculate the linkage between clusters ("ward", "complete", "average", "single").
     # Can be fixed or a range of values can be specified for grid search.
-    linkage: ward
+    linkages: [ward]
   
   dbscan:
     # eps_range: Range for the epsilon parameter (eps) in DBSCAN. Defines the maximum distance between two samples 
@@ -98,7 +98,7 @@ clustering_models:
     # It can be a fixed value with establishing "eps" as the hyperparameter.
     eps_range:
       min: 0.1
-      max: 0.5
+      max: 2
       step: 0.1
 
     # min_samples_range: Range for the minimum number of samples required to form a core point in DBSCAN.
@@ -106,7 +106,7 @@ clustering_models:
     # It can be a fixed value with establishing "min_samples" as the hyperparameter.
     min_samples_range:
       min: 5
-      max: 20
+      max: 15
       step: 1
   
   optics:
@@ -128,7 +128,10 @@ plot: true
 # Defaults to pca.
 visualization_technique: tsne
 
+####################################
 # DATASET REDUCTION
+####################################
+
 # reduction: Flag that indicates whether to reduce the dataset or not. The reduction is done based on clustering results by selecting the most significant images 
 # depending on the 'reduction_type' parameter.
 reduction: true
@@ -146,13 +149,27 @@ reduction_type: representative
 # Defaults to 0.
 diverse_percentage: 0.0
 
+# include_outliers: Some clustering models such as DBSCAN or OPTICS, also label outlier values. This flag indicates whether to include 
+# outliers (label -1) in the selection. Defaults to false.
+include_outliers: false
+
 # reduction_model: Clustering model to apply in order to select the images from each cluster. It can be KMeans, AgglomerativeClustering, DBSCAN or OPTICS. Only one model must 
 # be specified.
 # It can also use the best model with the best hyperparameters depending on "clustering_metric" from the clustering_models list
 # using "best_model" if the cluster_images flag is true.
-reduction_model: best_model
+reduction_model:
+  agglomerative:
+    # n_clusters: Defines the number of clusters to form in AgglomerativeClustering.
+    # Can be set to a fixed value or a range for grid search.
+    n_clusters: 5
 
+    # linkage: Method used to calculate the linkage between clusters ("ward", "complete", "average", "single").
+    # Can be fixed or a range of values can be specified for grid search.
+    linkage: ward
+
+####################################
 # TRANSFORMATION CONFIGURATION
+####################################
 
 # depth_model: Depth estimation model to use from HuggingFace if needed for converting YOLO and COCO/JSON format labels to multilabel. 
 # The model is used to analyze the depth of each object in an image, helping to determine the relative positioning. 
@@ -174,11 +191,18 @@ threshold: 255
 # corresponding class labels for segmentation. 
 # If the masks are color-coded but no dictionary is provided, one will be calculated automatically by assigning a class to each color,
 # starting from 0, in the order of their appearance. If the dictionary is not needed, this parameter will be ignored.
-color_dict:
-  "[0,0,255]": 1
-  "[0,255,0]": 2
+#color_dict:
+#  "[170, 170, 170]": 0     #Trail
+#  "[0, 255, 0]": 1         #Grass
+#  "[102, 102, 51]": 2      #Vegetation
+#  "[0, 0, 0]": 3           #Obstacle
+#  "[0, 120, 255]": 4       #Sky
+#  "[0, 60, 0]": 5          #Void
 
+####################################
 # DATA SPLIT CONFIGURATION
+####################################
+
 # split_percentages: Defines the percentage of the dataset used for training, validation and testing. 
 split_percentages:
   train: 0.7
@@ -208,12 +232,21 @@ stratification_type: pixels
 # Ensure sufficient computational resources before enabling cross-validation.
 cross_validation: 5
 
+####################################
+# TRAINING CONFIGURATION
+####################################
+
 # segmentation: Defines the type of segmentation to perform.
 # - "semantic": Semantic segmentation, where each pixel is classified into a predefined class. This type of segmentation
 #   groups pixels with similar characteristics into classes such as "car", "person", "building", etc.
 # - "instance": Instance segmentation, which not only labels each pixel but also differentiates between separate objects of the same class. 
 #   For example, it would distinguish between two cars in the same image.
 segmentation: semantic
+
+# binary: Flag to indicate that the segmentation task is binary, meaning there are only two classes: foreground (target) and background. 
+# If set to false, the task would be multi-class (more than two classes), typically used for semantic segmentation 
+# with multiple object classes. Defaults to false.
+binary: false
 
 # models: Specifies the model(s) to use for the segmentation task.
 models: unet
@@ -238,7 +271,7 @@ epochs: 100
 # background: Specifies the class label for background pixels in the segmentation task. 
 # For example, if the model is performing semantic segmentation on an image, background pixels would be assigned this label.
 # If no background is provided, it is assumed that no background class exists in the dataset and won't be ignored when calculating the metrics.
-background: 3
+
 
 # verbose: If set to true, this flag enables more detailed logging during the training and validation phases.
 # It provides useful information about the model’s training progress, performance on the validation set, and any issues during the process.
