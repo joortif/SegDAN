@@ -8,9 +8,12 @@ import os
 def get_embeddings(config_data:dict, dataset:ImageDataset, verbose:bool, logger = None):
     
     emb_factory = EmbeddingFactory()
-    emb_model = emb_factory.get_embedding_model(config_data)
 
-    embedding_info = config_data.get("embedding_model")
+    config_analysis = config_data['analysis']
+
+    emb_model = emb_factory.get_embedding_model(config_data, config_analysis)
+
+    embedding_info = config_analysis.get("embedding_model")
 
     if verbose:
         logger.info(f"Successfully loaded {embedding_info.get('name') or 'LBP'} model from {embedding_info.get('framework')}.")
@@ -20,7 +23,7 @@ def get_embeddings(config_data:dict, dataset:ImageDataset, verbose:bool, logger 
     return embeddings
 
 
-def cluster_images(config_data: dict, dataset: ImageDataset, embeddings, verbose: bool, logger = None):
+def cluster_images(config_data: dict, dataset: ImageDataset, embeddings, output_path, verbose: bool, logger = None):
 
     clustering_factory = ClusteringFactory()
 
@@ -35,9 +38,9 @@ def cluster_images(config_data: dict, dataset: ImageDataset, embeddings, verbose
         random_state = args.get("random_state", 123)
         clust_model = clustering_factory.generate_clustering_model(model_name, dataset, embeddings, random_state)
         if plot:
-            output_path = os.path.join(config_data['output_path'], "clustering", model_name)
-            os.makedirs(output_path, exist_ok=True)
-        model = ClusteringModel(clust_model, args, embeddings, evaluation_metric,vis_technique, plot, output_path)
+            output_dir = os.path.join(output_path, "clustering", model_name)
+            os.makedirs(output_dir, exist_ok=True)
+        model = ClusteringModel(clust_model, args, embeddings, evaluation_metric,vis_technique, plot, output_dir)
         results[model_name] = model.train(model_name, verbose)
 
     if len(results.keys()) == 1:
@@ -69,6 +72,7 @@ def cluster_images(config_data: dict, dataset: ImageDataset, embeddings, verbose
 
         if param == 'random_state':
             best_value = value
+
         logger.info(f"  {param}: {best_value}")
         best_model_config[param] = best_value
 

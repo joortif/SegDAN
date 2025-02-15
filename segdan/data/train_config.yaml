@@ -1,0 +1,58 @@
+####################################
+# DATA SPLIT CONFIGURATION
+####################################
+
+# split_percentages: Defines the percentage of the dataset used for training, validation and testing. 
+split_percentages:
+  train: 0.7
+  valid: 0.2
+  test: 0.1
+
+# stratification: Flag that ensures the dataset split is stratified. 
+# Although stratification may provide more realistic and correct results for the final model, it can increase computational complexity.
+stratification: true
+
+# stratification_type: Defines the strategy to stratify the original dataset. It can be:
+# - "pixels": Stratifies based on the number of pixels for each class in the dataset, ensuring that the distribution of pixels 
+#   for each class is maintained across the splits.
+# - "objects": Stratifies based on the number of objects of each class, ensuring that the number of instances of each class 
+#   is consistent across the splits.
+# - "pixel_to_object_ratio": Stratifies based on the ratio of pixels to objects for each class in the image, helping to maintain 
+#   a balance between the relative size and the frequency of each class in the dataset splits. 
+stratification_type: pixels
+
+# cross_validation: Defines the number of folds for cross-validation.
+# Cross-validation is a technique used to evaluate the model's performance by splitting the dataset into multiple subsets 
+# (called "folds") and training the model on different combinations of these subsets. This helps to reduce overfitting 
+# and provides a more reliable estimate of model performance.
+# A typical value is 5 or 10 folds, but you can set it to any integer based on the size of the dataset and your computational resources.
+# The technique will be used only for "train" and "valid" splits.
+# Note: The computational cost will increase significantly because multiple models will need to be trained for each fold.
+# Ensure sufficient computational resources before enabling cross-validation.
+cross_validation: 5
+
+####################################
+# TRAINING CONFIGURATION
+####################################
+
+# segmentation: Defines the type of segmentation to perform.
+# - "semantic": Semantic segmentation, where each pixel is classified into a predefined class. This type of segmentation
+#   groups pixels with similar characteristics into classes such as "car", "person", "building", etc.
+# - "instance": Instance segmentation, which not only labels each pixel but also differentiates between separate objects of the same class. 
+#   For example, it would distinguish between two cars in the same image.
+segmentation: semantic
+
+# models: Specifies the model(s) to use for the segmentation task.
+models: unet
+
+# metric: Defines the evaluation metric to use for the segmentation task and select the best model.
+# - "dice_score": It measures the overlap between the predicted segmentation and the ground truth, where a higher value indicates 
+# better performance. Dice score ranges from 0 to 1, where 1 means perfect overlap.
+# - "iou": It calculates the intersection area divided by the union of the predicted and true areas. It is also used widely 
+# in object detection tasks.
+segmentation_metric: dice_score
+
+# epochs: Defines the number of times the entire dataset will be passed through the model during training.
+# Increasing the number of epochs generally leads to better model performance, but it also increases the training time.
+# Too many epochs might cause overfitting, so it's recommended to monitor performance and adjust accordingly.
+epochs: 100

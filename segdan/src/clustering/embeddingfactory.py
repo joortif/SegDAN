@@ -2,10 +2,10 @@ from imagedatasetanalyzer import HuggingFaceEmbedding, PyTorchEmbedding, Tensorf
 
 class EmbeddingFactory:
 
-    def get_embedding_model(self, config):
+    def get_embedding_model(self, config, analysis_config):
         
         batch_size = config["batch_size"]
-        embedding_model_info = config["embedding_model"]
+        embedding_model_info = analysis_config["embedding_model"]
 
         model_name = embedding_model_info["name"]
         framework = embedding_model_info["framework"]

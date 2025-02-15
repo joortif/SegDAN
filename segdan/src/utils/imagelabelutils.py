@@ -45,7 +45,17 @@ class ImageLabelUtils:
         cv2.imwrite(mask_filepath, mask)
 
     @staticmethod
-    def check_label_extensions(label_dir, verbose, logger):
+    def get_labels_dir(dataset_path: str):
+        try:
+            labels_dir = os.path.join(dataset_path, "labels")
+            if os.path.isdir(labels_dir):
+                return labels_dir
+            return None
+        except Exception as e:
+            return None
+
+    @staticmethod
+    def check_label_extensions(label_dir, verbose=False, logger=None):
         """
         Checks the extensions of label files in the label directory to ensure consistency.
 
@@ -71,7 +81,9 @@ class ImageLabelUtils:
                 enum_ext = LabelExtensions.extensionToEnum(ext)
 
                 if enum_ext:
-                    print(f"All labels are in {enum_ext.name} format.")
+                    if verbose:
+                        logger.info(f"All labels are in {enum_ext.name} format.")
+
                     return LabelExtensions.enumToExtension(enum_ext)
                 
             except ExtensionNotFoundException as e:

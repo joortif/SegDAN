@@ -1,26 +1,29 @@
-import json
 import os
 import yaml
 import numpy as np
 
 class ConfigHandler():
-
-    REQUIRED_KEYS = [
+    
+    REQUIRED_KEYS_CONFIG = [
         "dataset_path", 
-        "output_path", 
+        "output_path",
+        "batch_size"
+    ]
+
+    REQUIRED_KEYS_ANALYSIS = [
         "analyze",
         "cluster_images",
-        "reduction",
+        "reduction"
+    ]
+
+    REQUIRED_KEYS_TRAINING = [
         "split_percentages",
         "stratification",
         "segmentation", 
         "models", 
         "segmentation_metric", 
-        "batch_size", 
-        "epochs",
-        "verbose"
-        ]
-
+        "epochs"
+    ]
 
     CONFIGURATION_VALUES = {
         "frameworks": ["huggingface", "pytorch", "tensorflow", "opencv"],
@@ -38,7 +41,7 @@ class ConfigHandler():
         "stratification_type": ["pixel_prop", "num_objects", "ratio"],
 
         "segmentation": ["semantic", "instance"],
-        "semantic_segmentation_models": ["unet", "deeplabv3"],
+        "semantic_segmentation_models": ["unet", "deeplabv3", "segformer"],
         "instance_segmentation_models": ["yolo"],
         "segmentation_metric": ["iou", "dice_score"],
         "stratification_types": ["pixels", "objects", "pixel_to_object_ratio"]
@@ -55,23 +58,13 @@ class ConfigHandler():
         "plot": True,
         "visualization_technique": "pca",
         "diverse_percentage": 0.0,
+        "use_reduced": False,
         "depth_model": "Intel/dpt-swinv2-tiny-256",
         "threshold": 255,
         "stratification_type": "pixels",
         "binary": False,
-        "include_outliers": False
+        "include_outliers": False,
     }
-
-    @staticmethod
-    def get_labels_dir(dataset_path: str):
-        try:
-            labels_dir = os.path.join(dataset_path, "labels")
-            if os.path.isdir(labels_dir):
-                return labels_dir
-
-            return None
-        except Exception as e:
-            return None
         
     @staticmethod
     def validate_range(range_params, param_name):
@@ -131,6 +124,22 @@ class ConfigHandler():
         return converted_color_dict
     
     @staticmethod
+    def read_yaml_file(file_path: str):
+        file_extension = file_path.lower().split('.')[-1]
+
+        try:
+            with open(file_path, "r", encoding="utf-8") as f:
+                if file_extension == "yaml" or file_extension == "yml":
+                    data = yaml.safe_load(f)
+                else:
+                    raise ValueError(f"File {file_path} is not a valid YAML file.")
+                
+        except (yaml.YAMLError) as e:
+            raise ValueError(f"File {file_path} does not have a valid format. Error: {str(e)}")
+    
+        return data
+    
+    @staticmethod
     def load_config_file(file_path:str):
         if not os.path.exists(file_path):
             raise FileNotFoundError(f"File {file_path} does not exist.")
@@ -138,29 +147,30 @@ class ConfigHandler():
         if not os.path.isfile(file_path):
             raise ValueError(f"File {file_path} is not valid.")
         
-        file_extension = file_path.lower().split('.')[-1]
+        data = ConfigHandler.read_yaml_file(file_path)
 
-        try:
-            with open(file_path, "r", encoding="utf-8") as f:
-                if file_extension == "json":
-                    data = json.load(f)
-                elif file_extension == "yaml" or file_extension == "yml":
-                    data = yaml.safe_load(f)
-                else:
-                    raise ValueError(f"File {file_path} is neither a valid JSON nor YAML file.")
-                
-        except (json.JSONDecodeError, yaml.YAMLError) as e:
-            raise ValueError(f"File {file_path} does not have a valid format. Error: {str(e)}")
-
-        return ConfigHandler.read_config(data)
-
+        return ConfigHandler.read_config(data, file_path)
+    
     @staticmethod
-    def read_config(data: dict):
-        
-        for key in ConfigHandler.REQUIRED_KEYS:
+    def validate_required_keys(data, required_keys):
+        for key in required_keys:
             if key not in data:
                 raise ValueError(f"Missing required configuration key: '{key}'.")
-        
+
+    @staticmethod
+    def resolve_path(path, base_dir):
+        return path if os.path.isabs(path) else os.path.abspath(os.path.join(base_dir, path))
+
+    @staticmethod
+    def read_config(data: dict, yaml_path:str):
+
+        base_dir = os.path.dirname(os.path.abspath(yaml_path))
+
+        ConfigHandler.validate_required_keys(data, ConfigHandler.REQUIRED_KEYS_CONFIG)
+
+        data["dataset_path"] = ConfigHandler.resolve_path(data["dataset_path"], base_dir)
+        data["output_path"] = ConfigHandler.resolve_path(data["output_path"], base_dir)
+
         if not os.path.exists(data["dataset_path"]):
             raise FileNotFoundError(f"Directory {data['dataset_path']} does not exist.")
         
@@ -176,12 +186,74 @@ class ConfigHandler():
         if not os.path.isdir(data["output_path"]):
             raise ValueError(f"Path {data['dataset_path']} is not a valid directory.")
         
+        if "verbose" not in data: 
+            print(f"verbose flag not detected. The default value of {ConfigHandler.DEFAULT_VALUES['verbose']} will be used.")
+            data["verbose"] = ConfigHandler.DEFAULT_VALUES['verbose']
+        
+        if not isinstance(data["verbose"], bool):
+            raise ValueError(f"The value of 'verbose' must be a boolean (true or false), but got {type(data['verbose'])}.")
+        
+        if "binary" not in data: 
+            print(f"binary flag not detected. The default value of {ConfigHandler.DEFAULT_VALUES['binary']} will be used.")
+            data["binary"] = ConfigHandler.DEFAULT_VALUES['binary']
+
+        if not isinstance(data["binary"], bool):
+            raise ValueError(f"The value of 'binary' must be a boolean (true or false), but got {type(data['binary'])}.")
+
+        if not (data.get("analysis") and data["analysis"].get("config_path")) and not (data.get("training") and data["training"].get("config_path")):
+            raise ValueError("At least one of 'analysis' or 'training' must be defined in the configuration.")
+        
+        if not isinstance(data["batch_size"], int): 
+            raise ValueError(f"The value of 'batch_size' must be an integer, but got {type(data['batch_size'])}.")
+        
+        background = data.get("background")
+        if background is not None and not isinstance(background, int):
+            raise ValueError(f"The value of 'background' must be an integer, but got a value of type {type(background)}.")
+        if background is None:
+            print("No background class provided. It is assumed that no background class exists in labels and all pixels belong to a class.")
+            data["background"] = None
+
+        if data.get("analysis"):
+            analysis_path = data["analysis"].get("config_path", None)
+            if not analysis_path:
+                raise ValueError("The 'config_path' for 'analysis' must be specified and cannot be empty.")
+            
+            analysis_path = ConfigHandler.resolve_path(analysis_path, base_dir)
+            if not os.path.exists(analysis_path):
+                raise FileNotFoundError(f"Analysis configuration file not found: {analysis_path}")
+            
+            file_data = ConfigHandler.read_yaml_file(analysis_path)
+            data["analysis"] = ConfigHandler.read_analysis(file_data)
+            
+
+        if data.get("training"):
+            training_path = data["training"].get("config_path", None)
+            if not training_path:
+                raise ValueError("The 'config_path' for 'training' must be specified and cannot be empty.")
+            
+            training_path = ConfigHandler.resolve_path(training_path, base_dir)
+            if not os.path.exists(training_path):
+                raise FileNotFoundError(f"Training configuration file not found: {training_path}")
+            
+            file_data = ConfigHandler.read_yaml_file(training_path)
+            data["training"] = ConfigHandler.read_training(file_data)
+
+        if data["verbose"]:
+            print("Successfully loaded data from config file.")
+
+        return data
+
+    @staticmethod
+    def read_analysis(data: dict):
+
+        ConfigHandler.validate_required_keys(data, ConfigHandler.REQUIRED_KEYS_ANALYSIS)
+
         if not isinstance(data["analyze"], bool):
             raise ValueError(f"The value of 'analyze' must be an boolean (true or false), but got {type(data['analyze'])}.")
         
         if data.get("cluster_images"):
             if not data.get("embedding_model"): 
-                raise ValueError(f"When ")
+                raise ValueError("When 'cluster_images' is enabled, an 'embedding_model' must be provided.")
             
             embedding_model = data["embedding_model"]
 
@@ -292,7 +364,7 @@ class ConfigHandler():
                 valid_metrics = ConfigHandler.CONFIGURATION_VALUES["kmeans_clustering_metric"]  
 
             if clustering_metric not in valid_metrics:
-                raise ValueError(f"Invalid clustering_metric '{clustering_metric}'. Must be one of: {valid_metrics}.")
+                    raise ValueError(f"Invalid clustering_metric '{clustering_metric}'. Must be one of: {', '.join(valid_metrics)}.")
             
             if "plot" not in data:
                 print(f"Plot not detected for clustering. Using default clustering_metric of {ConfigHandler.DEFAULT_VALUES['plot']}.")
@@ -323,7 +395,7 @@ class ConfigHandler():
             if not isinstance(data["diverse_percentage"], float): 
                 raise ValueError(f"The value of 'diverse_percentage' must be a float, but got {type(data['diverse_percentage'])}.")
             
-            if not data.get("include_outliers", None):
+            if "include_outliers" not in data:
                 print(f"Parameter include_outliers not detected for reduction. Using default value of include_outliers to {ConfigHandler.DEFAULT_VALUES['include_outliers']}")
                 data['include_outliers'] = ConfigHandler.DEFAULT_VALUES['include_outliers']
         
@@ -333,7 +405,7 @@ class ConfigHandler():
             if data.get("reduction_model"):
                 if isinstance(data["reduction_model"], str):
                     if data["reduction_model"] != "best_model":
-                        raise ValueError(f"Invalid reduction model '{data['reduction_model']}'. Must be 'best_model'.")
+                        raise ValueError(f"Invalid 'reduction_model'. It must be either 'best_model' or a dictionary with a valid clustering model.")
 
                     if not data.get("cluster_images", False):
                         raise ValueError("'best_model' can only be used when 'cluster_images' is set to True.")
@@ -376,10 +448,18 @@ class ConfigHandler():
                     elif selected_model == "optics":
                         if "min_samples" not in model_params or not isinstance(model_params["min_samples"], int) or model_params["min_samples"] <= 0:
                             raise ValueError("OPTICS requires a positive integer 'min_samples' parameter.")
-                            
                 else:
                     raise ValueError("The 'reduction_model' must be either a string ('best_model') if cluster_images is True or a dictionary with one clustering model and its parameters if cluster_iamges is False.")
-        
+
+        if "use_reduced" in data:
+            if not data.get("reduction", False) and data["use_reduced"]:
+                raise ValueError("The 'reduction' flag must be set to True in order to use the reduced dataset.")
+            elif not isinstance(data["use_reduced"], bool):
+                raise ValueError(f"The value of 'use_reduced' must be a boolean (true or false), but got {type(data['use_reduced'])}.")
+        else:
+            print(f"Warning: 'use_reduced' parameter not detected. Using default value: {ConfigHandler.DEFAULT_VALUES['use_reduced']}.")
+            data["use_reduced"] = ConfigHandler.DEFAULT_VALUES['use_reduced']
+
         if "depth_model" not in data:
             print(f"Depth model for YOLO/COCO label transformation not defined. The default model {ConfigHandler.DEFAULT_VALUES['depth_model']} from HuggingFace will be used if needed.")
             data["depth_model"] = ConfigHandler.DEFAULT_VALUES['depth_model']
@@ -398,27 +478,34 @@ class ConfigHandler():
             print(f"Color dictionary for multicolor label transformation not defined. It will be calculated automatically if needed.")
             data["color_dict"] = None
         else: 
-            data["color_dict"] = ConfigHandler.validate_and_convert_color_dict(data["color_dict"])
+            data["color_dict"] = ConfigHandler.validate_and_convert_color_dict(data["color_dict"])    
+
+        return data
+
+    @staticmethod
+    def read_training(data: dict):
+
+        ConfigHandler.validate_required_keys(data, ConfigHandler.REQUIRED_KEYS_TRAINING)
 
         if not isinstance(data["split_percentages"], dict):
             raise ValueError("'split_percentages' must be a dictionary with keys 'train', 'valid', and 'test'.")
 
-        required_keys = {"train", "valid", "test"}
-        if set(data["split_percentages"].keys()) != required_keys:
-            raise ValueError(f"'split_percentages' must contain exactly the keys: {required_keys}.")
-
-        if not all(isinstance(data["split_percentages"][key], float) for key in required_keys):
-            raise ValueError("'split_percentages' values must all be floats.")
-
-        if not all(0 <= data["split_percentages"][key] <= 1 for key in required_keys):
-            raise ValueError("Each 'split_percentages' value must be between 0 and 1.")
+        for key in ["train", "valid", "test"]:
+            if key not in data["split_percentages"]:
+                raise ValueError(f"Missing the key '{key}' in 'split_percentages'.")
+            if not isinstance(data["split_percentages"][key], float):
+                raise ValueError(f"The value of '{key}' in 'split_percentages' must be a float.")
+            if not 0 <= data["split_percentages"][key] <= 1:
+                raise ValueError(f"The value of '{key}' in 'split_percentages' must be between 0 and 1.")
 
         if round(sum(data["split_percentages"].values()), 10) != 1.0:
             raise ValueError("The sum of 'train', 'valid', and 'test' split percentages must be exactly 1.0.")
 
-        if data.get("stratification") and data.get("stratification_type") not in ConfigHandler.CONFIGURATION_VALUES['stratification_types']:
-            print(f"Invalid stratification_type selected. Must be one of: {ConfigHandler.CONFIGURATION_VALUES['stratification_types']}. Selected default value of {ConfigHandler.DEFAULT_VALUES['stratification_type']}")
-            data["stratification_type"] = ConfigHandler.DEFAULT_VALUES['stratification_type']
+        if data.get("stratification"):
+            stratification_type = data.get("stratification_type", ConfigHandler.DEFAULT_VALUES['stratification_type'])
+            if stratification_type not in ConfigHandler.CONFIGURATION_VALUES['stratification_types']:
+                print(f"Invalid 'stratification_type' selected. Default value '{stratification_type}' will be used.")
+                data["stratification_type"] = stratification_type
 
         if "cross_validation" in data:
             if not isinstance(data["cross_validation"], int):
@@ -428,41 +515,27 @@ class ConfigHandler():
             if data["cross_validation"] > 0 and ("train" not in data["split_percentages"] or "valid" not in data["split_percentages"] or "test" not in data["split_percentages"]):
                 raise ValueError("When cross-validation is enabled,'train', 'valid' and 'test' splits must be provided in 'split_percentages'.")    
 
+            if data["cross_validation"] > 0:
+                print("Warning: Cross-validation is enabled. Be aware that this may significantly increase computational time.")
+
+
         if data.get("segmentation") not in ConfigHandler.CONFIGURATION_VALUES["segmentation"]:
             raise ValueError(f"Invalid segmentation type. Must be one of: {ConfigHandler.CONFIGURATION_VALUES['segmentation']}.")
-        
-        if not data.get("binary", False): 
-            print(f"'Binary' flag not detected. The default value of {ConfigHandler.DEFAULT_VALUES['binary']} will be used.")
-            data["binary"] = ConfigHandler.DEFAULT_VALUES['binary']
 
-        if data["segmentation"] == "semantic" and not all(model in ConfigHandler.CONFIGURATION_VALUES["semantic_segmentation_models"] for model in params.get("semantic_segmentation_models", [])): 
-            raise ValueError(f"Invalid semantic segmentation model. Must be one of: {ConfigHandler.CONFIGURATION_VALUES['semantic_segmentation_models']}.")
-        
-        if data["segmentation"] == "instance" and not all(model in ConfigHandler.CONFIGURATION_VALUES["instance_segmentation_models"] for model in params.get("instance_segmentation_models", [])):
-            raise ValueError(f"Invalid instance segmentation model. Must be of: {ConfigHandler.CONFIGURATION_VALUES['instance_segmentation_models']}.")
+        if data["segmentation"] == "semantic":
+            models = data.get("semantic_segmentation_models", [])
+            if not all(model in ConfigHandler.CONFIGURATION_VALUES["semantic_segmentation_models"] for model in models):
+                raise ValueError(f"Invalid semantic segmentation models. Must be one of: {ConfigHandler.CONFIGURATION_VALUES['semantic_segmentation_models']}.")
+
+        if data["segmentation"] == "instance":
+            models = data.get("instance_segmentation_models", [])
+            if not all(model in ConfigHandler.CONFIGURATION_VALUES["instance_segmentation_models"] for model in models):
+                raise ValueError(f"Invalid instance segmentation models. Must be one of: {ConfigHandler.CONFIGURATION_VALUES['instance_segmentation_models']}.")
         
         if data.get("segmentation_metric") not in ConfigHandler.CONFIGURATION_VALUES["segmentation_metric"]:
             raise ValueError(f"Invalid evaluation metric. Must be one of {ConfigHandler.CONFIGURATION_VALUES['segmentation_metric']}.")
         
-        if not isinstance(data["binary"], bool):
-            raise ValueError(f"The value of 'binary' must be a boolean (true or false), but got {type(data['binary'])}.")
-
-        if not isinstance(data["batch_size"], int): 
-            raise ValueError(f"The value of 'batch_size' must be an integer, but got {type(data['batch_size'])}.")
-        
         if not isinstance(data["epochs"], int): 
             raise ValueError(f"The value of 'epochs' must be an integer, but got {type(data['epochs'])}.")
         
-        if not data.get("background"):
-            print("Background class not provided. It is assumed that no background class exists in labels and all pixels belong to a class.")
-            data["background"] = None
-        if not isinstance(data["background"], int | None): 
-            raise ValueError(f"The value of 'background' must be an integer, but got {type(data['background'])}.")
-        
-        if not isinstance(data["verbose"], bool):
-            raise ValueError(f"The value of 'verbose' must be a boolean (true or false), but got {type(data['verbose'])}.")
-        
-        if data["verbose"]:
-            print("Successfully loaded data from config file.")
-
         return data
