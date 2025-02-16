@@ -21,6 +21,9 @@ class ColorConfigForm():
 
         tk.Button(self.top, text="Choose color", command=self.select_color).grid(row=self.row, column=2, padx=5, pady=5)
 
+        self.color_display = tk.Label(self.top, width=4, height=2, relief="solid", bg="white")
+        self.color_display.grid(row=self.row, column=3, padx=5, pady=5)
+
         self.row += 1
 
         tk.Button(self.top, text="Add class", command=self.add_class).grid(row=self.row, column=0, columnspan=3, pady=10)
@@ -45,6 +48,7 @@ class ColorConfigForm():
         color_code = colorchooser.askcolor()[1]  
         if color_code:
             self.selected_color = self.hex_to_rgb(color_code)
+            self.color_display.config(bg=color_code)
     
     def add_class(self):
         class_id = self.class_id_entry.get()
@@ -76,3 +80,6 @@ class ColorConfigForm():
     
     def close_form(self):
         self.top.destroy()
+        if self.colors:  
+            messagebox.showinfo("Color dictionary configuration", "Color dictionary saved successfully.")
+        

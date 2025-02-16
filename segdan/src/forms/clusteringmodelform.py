@@ -46,9 +46,11 @@ class ClusteringModelForm():
             grid_search_checkbox = tk.Checkbutton(self.top, variable=self.grid_search, command= lambda: self.on_grid_search_toggle())
             grid_search_checkbox.grid(row=1, column=2, padx=10, pady=5)
 
+        btn_frame = tk.Frame(self.top)
+        btn_frame.grid(row=3, column=0, columnspan=2, pady=10)
         
-        tk.Button(self.top, text="Cancel", command=self.clear_and_close_form).grid(row=10, column=1, pady=10, sticky="ew")
-        tk.Button(self.top, text="Add model", command=self.top.destroy).grid(row=10, column=2, pady=10, sticky="ew")
+        tk.Button(btn_frame, text="Cancel", command=self.clear_and_close_form).grid(row=0, column=1, pady=10, sticky="ew")
+        tk.Button(btn_frame, text="Add model", command=self.top.destroy).grid(row=0, column=2, pady=10, sticky="ew")
 
     def create_model_frame(self):
         self.model_frame = tk.LabelFrame(self.top, text="Hyperparameters", padx=10, pady=10)
