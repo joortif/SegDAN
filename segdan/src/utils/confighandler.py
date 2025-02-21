@@ -25,11 +25,18 @@ class ConfigHandler():
         "epochs"
     ]
 
+    VALID_IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg"}
+
     CONFIGURATION_VALUES = {
         "frameworks": ["huggingface", "pytorch", "tensorflow", "opencv"],
+        "huggingface_models": ["openai/clip-vit-base-patch16", "google/vit-base-patch16-224", "facebook/deit-base-patch16-224", 
+                               "microsoft/swin-tiny-patch4-window7-224", "facebook/dino-vits16", "facebook/convnext-base-224-22k", "Other"],
+        "pytorch_models": ["ResNet50", "ResNet101", "VGG16", "VGG19", "DenseNet121", "DenseNet169", "InceptionV3", "Other"],
+        "tensorflow_models": ["MobileNet", "MobileNetV2", "ResNet50", "ResNet101", "NASNetMobile", "NASNetLarge", "ConvNeXtTiny", "ConvNeXtBase", "DenseNet121", "DenseNet169", "Other"],
         "clustering_models": ["kmeans", "agglomerative", "dbscan", "optics"],
         "linkages" : ['ward', 'complete', 'average', 'single'],
         "visualization_techniques": ["pca", "tsne"],
+        "label_formats": ["txt", "json", "multilabel"],
 
         "lbp_methods": ["uniform", "default", "ror", "nri_uniform", "var"],
 
@@ -64,6 +71,16 @@ class ConfigHandler():
         "stratification_type": "pixels",
         "binary": False,
         "include_outliers": False,
+    }
+
+    DEFAULT_CLUSTERING_HYPERPARAMETERS = {
+        "n_clusters": 3,
+        "random_state": 123,
+        "eps": 0.5,
+        "min_samples": 5,
+        "n_clusters_range": {"min": 2, "max": 10, "step": 1},
+        "eps_range": {"min": 0.1, "max": 1, "step": 0.1},
+        "min_samples_range": {"min": 5, "max": 15, "step": 1},
     }
         
     @staticmethod

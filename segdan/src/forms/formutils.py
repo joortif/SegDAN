@@ -33,5 +33,3 @@ class FormUtils():
                                     for sub_key, sub_value in value.items()}
             else:
                 config_data[key] = value.get() if isinstance(value, (tk.StringVar, tk.IntVar, tk.DoubleVar, tk.BooleanVar)) else value
-
-        print(config_data)
