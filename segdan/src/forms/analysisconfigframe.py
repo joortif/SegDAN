@@ -3,7 +3,7 @@ from tkinter import ttk
 
 class AnalysisConfigFrame(ttk.Frame):
 
-    def __init__(self, parent, controller, config_data):
+    def __init__(self, parent, controller, config_data, final_dict):
         ttk.Frame.__init__(self, parent)
 
         self.analyze = {"analyze": False}
@@ -51,7 +51,7 @@ class AnalysisConfigFrame(ttk.Frame):
 
         self.row+=1
         button_frame = ttk.Frame(self.analysis_frame)
-        button_frame.grid(row=self.row, column=0, columnspan=5, pady=10)  
+        button_frame.grid(row=11, column=0, columnspan=5, pady=10)  
 
         button_back = ttk.Button(button_frame, text="Back", command=lambda: self.controller.show_frame("GeneralConfigFrame"))
         button_back.grid(row=0, column=0, padx=50, pady=5, sticky="w")

@@ -4,11 +4,9 @@ from PIL import Image, ImageTk
 
 class ClusteringFrame(ttk.Frame):
 
-    def __init__(self, parent, controller, config_data):
+    def __init__(self, parent, controller, config_data, final_dict):
         ttk.Frame.__init__(self, parent)
 
-        self.clustering = {"cluster_images": False}
-        self.clustering_var = tk.BooleanVar(value=False)
         self.config_data = config_data
         self.controller = controller
 
@@ -39,10 +37,10 @@ class ClusteringFrame(ttk.Frame):
         clustering_button_frame = ttk.Frame(self.clustering_frame)
         clustering_button_frame.grid(row=self.row, column=0, columnspan=5, pady=10)  
 
-        button_clustering_no = tk.Radiobutton(clustering_button_frame, text="No", variable=self.clustering_var, value=False)
+        button_clustering_no = tk.Radiobutton(clustering_button_frame, text="No", variable=self.config_data["cluster_images"], value=False)
         button_clustering_no.grid(row=0, column=0, padx=5, pady=5)
 
-        button_clustering_yes = tk.Radiobutton(clustering_button_frame, text="Yes", variable=self.clustering_var, value=True)
+        button_clustering_yes = tk.Radiobutton(clustering_button_frame, text="Yes", variable=self.config_data["cluster_images"], value=True)
         button_clustering_yes.grid(row=0, column=1, padx=5, pady=5)
 
         clustering_button_frame.grid_columnconfigure(0, weight=0)
@@ -50,7 +48,7 @@ class ClusteringFrame(ttk.Frame):
 
         self.row+=1
         button_frame = ttk.Frame(self.clustering_frame)
-        button_frame.grid(row=self.row, column=0, columnspan=5, pady=10)  
+        button_frame.grid(row=11, column=0, columnspan=5, pady=10)  
 
         button_back = ttk.Button(button_frame, text="Back", command=lambda: self.controller.show_frame("AnalysisConfigFrame"))
         button_back.grid(row=0, column=0, padx=50, pady=5, sticky="w")
@@ -62,11 +60,9 @@ class ClusteringFrame(ttk.Frame):
         button_frame.grid_columnconfigure(1, weight=0)    
 
     def next(self):
-       
-        self.clustering["cluster_images"] = self.clustering_var.get()
-        self.config_data.update(self.clustering)
-        if self.clustering["cluster_images"]: 
+
+        if self.config_data["cluster_images"].get(): 
             self.controller.show_frame("ClusteringConfigFrame")
             return
         
-        self.controller.show_frame("ReductionFrame")
+        self.controller.show_frame("TrainingConfigFrame")

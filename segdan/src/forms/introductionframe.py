@@ -5,7 +5,7 @@ import webbrowser
 
 class IntroductionFrame(ttk.Frame):
 
-    def __init__(self, parent, controller, config_data):
+    def __init__(self, parent, controller, config_data, final_dict):
         ttk.Frame.__init__(self, parent)
         
         label_title = ttk.Label(self, text="Welcome to SegDAN configuration wizard.", font=("Arial", 18, "bold"))
@@ -35,8 +35,7 @@ class IntroductionFrame(ttk.Frame):
 
         label_link.bind("<Button-1>", lambda e: webbrowser.open("https://en.wikipedia.org/wiki/Active_learning_(machine_learning)"))
 
-
-        button = ttk.Button(self, text="Next", command=lambda: controller.show_frame("AnalysisConfigFrame"))
+        button = ttk.Button(self, text="Next", command=lambda: controller.show_frame("GeneralConfigFrame"))
         button.pack()
 
     

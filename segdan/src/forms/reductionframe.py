@@ -4,10 +4,9 @@ from tkinter import ttk
 
 class ReductionFrame(ttk.Frame):
     
-    def __init__(self, parent, controller, config_data):
+    def __init__(self, parent, controller, config_data, final_dict):
         ttk.Frame.__init__(self, parent)
 
-        self.reduce = {"reduce_images": False}
         self.reduction_var = tk.BooleanVar(value=False)
         self.config_data = config_data
         self.controller = controller
@@ -42,10 +41,10 @@ class ReductionFrame(ttk.Frame):
         reduction_button_frame = ttk.Frame(self.reduction_frame)
         reduction_button_frame.grid(row=self.row, column=0, columnspan=5, pady=10)  
 
-        button_reduction_no = tk.Radiobutton(reduction_button_frame, text="No", variable=self.reduction_var, value=False)
+        button_reduction_no = tk.Radiobutton(reduction_button_frame, text="No", variable=self.config_data["reduce_images"], value=False)
         button_reduction_no.grid(row=0, column=0, padx=5, pady=5)
 
-        button_reduction_yes = tk.Radiobutton(reduction_button_frame, text="Yes", variable=self.reduction_var, value=True)
+        button_reduction_yes = tk.Radiobutton(reduction_button_frame, text="Yes", variable=self.config_data["reduce_images"], value=True)
         button_reduction_yes.grid(row=0, column=1, padx=5, pady=5)
 
         reduction_button_frame.grid_columnconfigure(0, weight=0)
@@ -53,9 +52,9 @@ class ReductionFrame(ttk.Frame):
 
         self.row+=1
         button_frame = ttk.Frame(self.reduction_frame)
-        button_frame.grid(row=self.row, column=0, columnspan=5, pady=10)  
+        button_frame.grid(row=11, column=0, columnspan=5, pady=10)  
 
-        button_back = ttk.Button(button_frame, text="Back", command=lambda: self.controller.show_frame("ClusteringFrame"))
+        button_back = ttk.Button(button_frame, text="Back", command=self.back)
         button_back.grid(row=0, column=0, padx=50, pady=5, sticky="w")
 
         button_next = ttk.Button(button_frame, text="Next", command=self.next)
@@ -64,11 +63,16 @@ class ReductionFrame(ttk.Frame):
         button_frame.grid_columnconfigure(0, weight=0)
         button_frame.grid_columnconfigure(1, weight=0)    
 
+    def back(self):
+        if not self.config_data["cluster_images"]:
+            self.controller.show_frame("ClusteringFrame")
+            return
+
+        self.controller.show_frame("ClusteringConfigFrame")
+
     def next(self):
        
-        self.reduce["reduction"] = self.reduction_var.get()
-        self.config_data.update(self.reduce)
-        if self.reduce["reduction"]:
+        if self.config_data["reduce_images"].get():
             self.controller.show_frame("ReductionConfigFrame")
             return
     

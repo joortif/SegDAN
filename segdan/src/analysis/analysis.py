@@ -15,33 +15,29 @@ def _analyze_and_save_results(dataset: ImageDataset, output_path: str, verbose: 
 
     print(f"Dataset analysis ended successfully. Results saved in {analysis_result_path}")
 
-def analyze_data(data: dict, transformerFactory: TransformerFactory, imgs_dir: str, verbose: bool, logger):
+def analyze_data(general_data: dict, transformerFactory: TransformerFactory, output_path:str,  verbose: bool, logger):
 
-    analysis_data = data["analysis"]
+    image_path = general_data["image_path"]
+    label_path = general_data["label_path"]
+    background = general_data.get("background", None)
+    binary = general_data.get("binary")
 
-    dataset_path = data["dataset_path"]
-    output_path = data["output_path"]
-    background = data.get("background", None)
-    binary = data.get("binary")
-
-    labels_dir = ConfigHandler.get_labels_dir(dataset_path)
-
-    if labels_dir is None:
-        dataset = ImageDataset(imgs_dir)
+    if label_path is None:
+        dataset = ImageDataset(image_path)
         _analyze_and_save_results(dataset, output_path, verbose)
         return 
 
-    ext = ImageLabelUtils.check_label_extensions(labels_dir, verbose, logger)
+    ext = ImageLabelUtils.check_label_extensions(label_path, verbose, logger)
 
     if ext != LabelExtensions.PNG.value:
-        labels_dir = transform_labels(labels_dir, imgs_dir, ext, analysis_data, output_path, background, transformerFactory)
+        label_path = transform_labels(label_path, image_path, ext, general_data, output_path, background, transformerFactory)
     else: 
         if binary: 
-            labels_dir = transform_labels(labels_dir, imgs_dir, "binary", analysis_data, output_path, background, transformerFactory)
-        if ImageLabelUtils.all_images_are_color(labels_dir):
-            labels_dir = transform_labels(labels_dir, imgs_dir, "color", analysis_data, output_path, background, transformerFactory)
+            label_path = transform_labels(label_path, image_path, "binary", general_data, output_path, background, transformerFactory)
+        if ImageLabelUtils.all_images_are_color(label_path):
+            label_path = transform_labels(label_path, image_path, "color", general_data, output_path, background, transformerFactory)
 
-    dataset = ImageLabelDataset(imgs_dir, labels_dir, background=background)
+    dataset = ImageLabelDataset(image_path, label_path, background=background)
     _analyze_and_save_results(dataset, output_path, verbose)
     return 
         

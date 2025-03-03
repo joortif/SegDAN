@@ -23,6 +23,7 @@ class ColorConfigForm():
 
         self.color_display = tk.Label(self.top, width=4, height=2, relief="solid", bg="white")
         self.color_display.grid(row=self.row, column=3, padx=5, pady=5)
+        self.color_display.grid_remove()
 
         self.row += 1
 
@@ -35,7 +36,7 @@ class ColorConfigForm():
 
         self.row += 1
 
-        self.classes_listbox = tk.Listbox(self.top, width=50, height=10)
+        self.classes_listbox = tk.Listbox(self.top, width=50, height=10, exportselection=0)
         self.classes_listbox.grid(row=self.row, column=0, columnspan=3, padx=5, pady=5)
 
         self.row += 1
@@ -49,6 +50,7 @@ class ColorConfigForm():
         if color_code:
             self.selected_color = self.hex_to_rgb(color_code)
             self.color_display.config(bg=color_code)
+            self.color_display.grid()
     
     def add_class(self):
         class_id = self.class_id_entry.get()
@@ -63,12 +65,21 @@ class ColorConfigForm():
             messagebox.showwarning("Warning", "Class ID must be a positive integer.")
             return
 
-        self.colors[self.selected_color] = class_id
+        if class_id in self.colors:
+            for index in range(self.classes_listbox.size()):
+                item_text = self.classes_listbox.get(index)
+                if item_text.startswith(f"Class {class_id}:"):
+                    self.classes_listbox.delete(index)
+                    self.classes_listbox.insert(index, f"Class {class_id}: {self.selected_color}")
+                    break  
+        else:
+            self.classes_listbox.insert(tk.END, f"Class {class_id}: {self.selected_color}")
 
-        self.classes_listbox.insert(tk.END, f"Class {class_id}: {self.selected_color}")
+        self.colors[class_id] = self.selected_color
 
         self.class_id_entry.delete(0, tk.END)
         self.selected_color = None
+        
 
     def rgb_to_hex(self, rgb):
         return '#{:02x}{:02x}{:02x}'.format(rgb[0], rgb[1], rgb[2])

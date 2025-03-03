@@ -36,7 +36,7 @@ class ConfigHandler():
         "clustering_models": ["kmeans", "agglomerative", "dbscan", "optics"],
         "linkages" : ['ward', 'complete', 'average', 'single'],
         "visualization_techniques": ["pca", "tsne"],
-        "label_formats": ["txt", "json", "multilabel"],
+        "label_formats": ["txt", "json", "mask"],
 
         "lbp_methods": ["uniform", "default", "ror", "nri_uniform", "var"],
 
@@ -52,6 +52,12 @@ class ConfigHandler():
         "instance_segmentation_models": ["yolo"],
         "segmentation_metric": ["iou", "dice_score"],
         "stratification_types": ["pixels", "objects", "pixel_to_object_ratio"]
+    }
+
+    FRAMEWORK_URLS = {
+        "huggingface": "https://huggingface.co/models?pipeline_tag=image-feature-extraction",
+        "pytorch": "https://pytorch.org/vision/stable/models.html",
+        "tensorflow": "https://www.tensorflow.org/api_docs/python/tf/keras/applications#functions",
     }
 
     DEFAULT_VALUES = {

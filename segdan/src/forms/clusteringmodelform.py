@@ -12,6 +12,7 @@ class ClusteringModelForm():
             self.top.title("Clustering model selection")
 
             self.top.geometry("450x275")
+            self.top.resizable(False, False)
 
             self.model_selected = tk.StringVar(value="")
             self.grid_search = tk.BooleanVar(value=False)
@@ -63,7 +64,7 @@ class ClusteringModelForm():
         center_frame = tk.Frame(self.top)
         center_frame.grid(row=1, column=0, columnspan=3, pady=10) 
 
-        clustering_model_label = tk.Label(center_frame, text="Clustering model")
+        clustering_model_label = tk.Label(center_frame, text="Clustering model *")
         clustering_model_label.grid(row=1, column=0, padx=10, sticky="e")
         ToolTip(clustering_model_label, msg="Choose a clustering algorithm from the dropdown list.")
 
@@ -113,6 +114,9 @@ class ClusteringModelForm():
         else:
             self.temp_config_data = self.config_data.copy()
 
+        if model != "best model":
+            self.model_frame.grid()
+
         if model == "kmeans":
              self.show_kmeans_params()
 
@@ -124,6 +128,8 @@ class ClusteringModelForm():
 
         elif model == "optics":
             self.show_optics_params()     
+        elif model == "best model":
+            self.model_frame.grid_remove()
     
     def on_grid_search_toggle(self):
         model = self.model_selected.get().lower()
@@ -223,6 +229,8 @@ class ClusteringModelForm():
         if param_key=="random_state" or not self.grid_search.get():
             value = self.temp_config_data[model].get(param_key, self.default_hyperparameters.get(param_key, 5))
 
+            self.temp_config_data[model][param_key] = value
+
             entry = tk.Entry(self.model_frame, width=10)
             entry.grid(row=row, column=1, padx=5, pady=5)
             entry.insert(0, str(value))
@@ -276,7 +284,7 @@ class ClusteringModelForm():
             
             self.temp_config_data[model].setdefault(param_key, [])
             
-            listbox = tk.Listbox(self.model_frame, selectmode="multiple", height=len(options))
+            listbox = tk.Listbox(self.model_frame, selectmode="multiple", height=len(options), exportselection=0)
             for option in options:
                 listbox.insert(tk.END, option)
             listbox.grid(row=row, column=1, columnspan=2, padx=5, pady=5)
@@ -311,6 +319,7 @@ class ClusteringModelForm():
 
         if model in self.temp_config_data:
             params = self.temp_config_data[model]
+            
 
             if model in ["kmeans", "agglomerative"]:
                 if "n_clusters" in params:
@@ -321,7 +330,12 @@ class ClusteringModelForm():
                     if n_clusters < 2:
                         tk.messagebox.showerror("Error", f"Number of clusters with {model} model must be at least 2.")
                         return False
-                elif "n_clusters_range" in params:
+                if "linkages" in params:
+                    linkages = params["linkages"]
+                    if len(linkages) == 0:
+                        tk.messagebox.showerror("Error", "At least one linkage for agglomerative clustering must be selected.")
+                        return False
+                if "n_clusters_range" in params:
                     n_clusters_min = params["n_clusters_range"]["min"]
                     n_clusters_max = params["n_clusters_range"]["max"]
                     if n_clusters_min == "" or n_clusters_max == "" or params["n_clusters_range"]["step"] == "":
@@ -335,6 +349,7 @@ class ClusteringModelForm():
                     if n_clusters_min > n_clusters_max:
                         tk.messagebox.showerror("Error", f"Min value of clusters range must be less than max value.")
                         return False
+                
 
             if model == "dbscan":
                 if "min_samples" in params:

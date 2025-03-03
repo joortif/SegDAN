@@ -2,20 +2,22 @@ from imagedatasetanalyzer import HuggingFaceEmbedding, PyTorchEmbedding, Tensorf
 
 class EmbeddingFactory:
 
-    def get_embedding_model(self, config, analysis_config):
+    def get_embedding_model(self, embedding_info):
         
-        batch_size = config["batch_size"]
-        embedding_model_info = analysis_config["embedding_model"]
+        model_name = embedding_info["name"]
+        framework = embedding_info["framework"]
 
-        model_name = embedding_model_info["name"]
-        framework = embedding_model_info["framework"]
+        res_height = embedding_info.get("resize_height")
+        res_width = embedding_info.get("resize_width")
 
-        res_height = embedding_model_info.get("resize_height")
-        res_width = embedding_model_info.get("resize_width")
+        lbp_radius = embedding_info.get("lbp_radius")
+        lbp_num_points = embedding_info.get("lbp_num_points")
+        lbp_method = embedding_info.get("lbp_method")
 
-        lbp_radius = embedding_model_info.get("lbp_radius")
-        lbp_num_points = embedding_model_info.get("lbp_num_points")
-        lbp_method = embedding_model_info.get("lbp_method")
+        batch_size = embedding_info["embedding_batch_size"]
+
+        if model_name.lower() == "other":
+            model_name = embedding_info["name_other"]
 
         framework_map = {
             'huggingface': lambda: HuggingFaceEmbedding(model_name, batch_size),

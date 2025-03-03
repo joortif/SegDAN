@@ -5,15 +5,13 @@ from src.clustering.embeddingfactory import EmbeddingFactory
 from imagedatasetanalyzer import ImageDataset
 import os
 
-def get_embeddings(config_data:dict, dataset:ImageDataset, verbose:bool, logger = None):
+def get_embeddings(clustering_data:dict, dataset:ImageDataset, verbose:bool, logger = None):
     
     emb_factory = EmbeddingFactory()
 
-    config_analysis = config_data['analysis']
+    embedding_info = clustering_data.get("embedding_model")
 
-    emb_model = emb_factory.get_embedding_model(config_data, config_analysis)
-
-    embedding_info = config_analysis.get("embedding_model")
+    emb_model = emb_factory.get_embedding_model(embedding_info)
 
     if verbose:
         logger.info(f"Successfully loaded {embedding_info.get('name') or 'LBP'} model from {embedding_info.get('framework')}.")
@@ -23,15 +21,15 @@ def get_embeddings(config_data:dict, dataset:ImageDataset, verbose:bool, logger 
     return embeddings
 
 
-def cluster_images(config_data: dict, dataset: ImageDataset, embeddings, output_path, verbose: bool, logger = None):
+def cluster_images(clustering_data: dict, dataset: ImageDataset, embeddings, output_path: str, verbose: bool, logger = None):
 
     clustering_factory = ClusteringFactory()
 
-    plot = config_data['plot']
-    evaluation_metric = config_data['clustering_metric']
-    vis_technique = config_data['visualization_technique']
+    plot = clustering_data['plot']
+    evaluation_metric = clustering_data['clustering_metric']
+    vis_technique = clustering_data['visualization_technique']
     
-    clustering_models = config_data["clustering_models"]
+    clustering_models = clustering_data["clustering_models"]
 
     results = {}
     for (model_name, args) in clustering_models.items():
@@ -62,7 +60,7 @@ def cluster_images(config_data: dict, dataset: ImageDataset, embeddings, output_
 
     logger.info(f"Best model: {model_name}")
     logger.info(f"Score ({evaluation_metric}): {model_score}")
-    logger.info("Best parameter:")
+    logger.info("Best parameters:")
 
     for param, value in model_params.items():
         best_value = best_model[1][list(model_params.keys()).index(param)]

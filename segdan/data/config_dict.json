@@ -1,0 +1,76 @@
+{
+    "cluster_images": true,
+    "reduce_images": false,
+    "general_data": {
+        "class_map_file": "",
+        "label_format": "mask",
+        "color_dict": {},
+        "class_mapping": {},
+        "image_path": "C:/Users/joortif/Desktop/datasets/Preprocesados/forest_freiburg_multiclass/train/images",
+        "label_path": "C:/Users/joortif/Desktop/datasets/Preprocesados/forest_freiburg_multiclass/train/labels",
+        "output_path": "C:/Users/joortif/Desktop/datasets/results_forest",
+        "verbose": false,
+        "binary": false,
+        "background": 0,
+        "threshold": 255
+    },
+    "clustering_data": {
+        "embedding_model": {
+            "framework": "huggingface",
+            "name": "Other",
+            "name_other": "asdsda",
+            "resize_height": 224,
+            "resize_width": 224,
+            "batch_size": 16,
+            "lbp_radius": 16,
+            "lbp_num_points": 48,
+            "lbp_method": "uniform"
+        },
+        "clustering_models": {
+            "agglomerative": {
+                "n_clusters": 3,
+                "linkage": "ward"
+            },
+            "dbscan": {
+                "eps": 0.5,
+                "min_samples": 5
+            }
+        },
+        "clustering_metric": "calinski",
+        "plot": false,
+        "visualization_technique": "pca"
+    },
+    "reduction_data": {
+        "reduction_percentage": 0.7,
+        "reduction_type": "representative",
+        "diverse_percentage": 0.2,
+        "include_outliers": false,
+        "reduction_model": "",
+        "use_reduced": false
+    },
+    "training_data": {
+        "split_method": true,
+        "hold_out": {
+            "train": 0.7,
+            "valid": 0.2,
+            "test": 0.1
+        },
+        "cross_val": {
+            "num_folds": 5
+        },
+        "stratification": true,
+        "stratification_type": "pixels",
+        "segmentation": "semantic",
+        "models": [
+            "segformer"
+        ],
+        "batch_size": 8,
+        "evaluation_metrics": [
+            "iou",
+            "dice_score"
+        ],
+        "selection_metric": "dice_score",
+        "epochs": 100
+    },
+    "analyze": false
+}
