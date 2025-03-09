@@ -1,6 +1,7 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
 
+from src.forms.configfileloaderframe import ConfigFileLoaderFrame
 from src.forms.trainingconfigframe import TrainingConfigFrame
 from src.forms.reductionframe import ReductionFrame
 from src.forms.clusteringconfigframe import ClusteringConfigFrame
@@ -46,7 +47,8 @@ class Wizard(tk.Tk):
          "Analysis", 
          "Clustering", "Clustering configuration", 
          "Reduction", "Reduction configuration", 
-         "Training"
+         "Training",
+         "ConfigFileLoader"
       ]
 
       self.frames = {}  
@@ -54,7 +56,7 @@ class Wizard(tk.Tk):
 
       self.create_breadcrumb()
 
-      steps_classes = [IntroductionFrame, GeneralConfigFrame, AnalysisConfigFrame, ClusteringFrame, ClusteringConfigFrame, ReductionFrame, ReductionConfigFrame, TrainingConfigFrame]
+      steps_classes = [IntroductionFrame, GeneralConfigFrame, AnalysisConfigFrame, ClusteringFrame, ClusteringConfigFrame, ReductionFrame, ReductionConfigFrame, TrainingConfigFrame, ConfigFileLoaderFrame]
 
       for Step in steps_classes:
          frame = Step(self.container, self, self.config_data, self.final_dict)
@@ -75,6 +77,9 @@ class Wizard(tk.Tk):
 
       self.breadcrumb_labels = []
       for step in self.steps:
+         if "configfileloader" in step.lower():
+               continue
+         
          if "configuration" in step.lower():
             step = step.replace("configuration", "\nconfiguration")
          label = ttk.Label(self.breadcrumb_frame, text=step, padding=(5, 2), justify="center")

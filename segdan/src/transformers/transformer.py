@@ -17,7 +17,7 @@ class Transformer():
             self.logger.addHandler(handler)
             self.logger.setLevel(logging.INFO)
 
-    def _create_empty_mask(self, height: int, width: int, fill_background: int |None):
+    def _create_empty_mask(self, height: int, width: int, fill_background: int | None):
 
         if fill_background is None:
           fill_background = 0

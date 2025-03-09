@@ -15,10 +15,11 @@ def _analyze_and_save_results(dataset: ImageDataset, output_path: str, verbose: 
 
     print(f"Dataset analysis ended successfully. Results saved in {analysis_result_path}")
 
-def analyze_data(general_data: dict, transformerFactory: TransformerFactory, output_path:str,  verbose: bool, logger):
+def analyze_data(general_data: dict, transformerFactory: TransformerFactory, output_path:str, class_map: dict,  verbose: bool, logger):
 
     image_path = general_data["image_path"]
     label_path = general_data["label_path"]
+    label_format = general_data["label_format"]
     background = general_data.get("background", None)
     binary = general_data.get("binary")
 
@@ -27,17 +28,20 @@ def analyze_data(general_data: dict, transformerFactory: TransformerFactory, out
         _analyze_and_save_results(dataset, output_path, verbose)
         return 
 
-    ext = ImageLabelUtils.check_label_extensions(label_path, verbose, logger)
+    if os.path.isdir(label_path):
+        ext = ImageLabelUtils.check_label_extensions(label_path, verbose, logger)
 
-    if ext != LabelExtensions.PNG.value:
-        label_path = transform_labels(label_path, image_path, ext, general_data, output_path, background, transformerFactory)
-    else: 
-        if binary: 
-            label_path = transform_labels(label_path, image_path, "binary", general_data, output_path, background, transformerFactory)
-        if ImageLabelUtils.all_images_are_color(label_path):
-            label_path = transform_labels(label_path, image_path, "color", general_data, output_path, background, transformerFactory)
+        if ext != LabelExtensions.PNG.value:
+            label_path = transform_labels(label_path, image_path, ext, general_data, output_path, background, transformerFactory)
+        else: 
+            if binary: 
+                label_path = transform_labels(label_path, image_path, "binary", general_data, output_path, background, transformerFactory)
+            if ImageLabelUtils.all_images_are_color(label_path):
+                label_path = transform_labels(label_path, image_path, "color", general_data, output_path, background, transformerFactory)
+    else:
+        label_path = transform_labels(label_path, image_path, ".json", general_data, output_path, background, transformerFactory)
 
-    dataset = ImageLabelDataset(image_path, label_path, background=background)
+    dataset = ImageLabelDataset(image_path, label_path, background=background, class_map=class_map)
     _analyze_and_save_results(dataset, output_path, verbose)
     return 
         

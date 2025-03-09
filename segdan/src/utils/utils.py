@@ -20,6 +20,18 @@ class Utils():
         return device
     
     @staticmethod
+    def params_to_range(range_params):
+        start = range_params["min"]
+        stop = range_params["max"]
+        step = range_params["step"]
+        
+        if isinstance(start, int) and isinstance(stop, int) and isinstance(step, int):
+            return range(start, stop + 1, step)
+        
+        elif isinstance(start, (int, float)) and isinstance(stop, (int, float)) and isinstance(step, (int, float)):
+            return np.arange(start, stop + step, step)
+    
+    @staticmethod
     def overlay_mask_on_image(image_path, mask, alpha=0.5):
         # Cargar imagen original
         img = cv2.imread(image_path)

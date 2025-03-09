@@ -1,5 +1,6 @@
 import tkinter as tk
 from tkinter import ttk
+import copy
 
 from tktooltip import ToolTip
 from src.utils.confighandler import ConfigHandler
@@ -35,7 +36,7 @@ class ClusteringModelForm():
             self.top.grid_columnconfigure(2, weight=1)
             self.top.grid_columnconfigure(3, weight=1)
 
-            self.model_frame = tk.LabelFrame(self.top, text="Hyperparameters", padx=10, pady=10)
+            self.model_frame = ttk.LabelFrame(self.top, text="Hyperparameters", padding=(20, 10))
             self.model_frame.grid(row=2, column=0, columnspan=4, padx=10, pady=10, sticky="ew")
             
             self.create_controls()
@@ -90,7 +91,7 @@ class ClusteringModelForm():
         
 
     def create_model_frame(self):
-        self.model_frame = tk.LabelFrame(self.top, text="Hyperparameters", padx=10, pady=10)
+        self.model_frame = ttk.LabelFrame(self.top, text="Hyperparameters", padx=10, pady=10, padding=(20, 10))
         self.model_frame.grid(row=2, column=0, columnspan=3, padx=10, pady=10, sticky="ew")
 
     def clear_model_frame(self):
@@ -192,7 +193,7 @@ class ClusteringModelForm():
             self.temp_config_data[model] = {}
 
         if range_key:
-            self.temp_config_data[model].setdefault(f"{param_key}_range", {})[range_key] = num_value
+            self.temp_config_data[model].setdefault(f"{param_key}", {})[range_key] = num_value
         else:
             self.temp_config_data[model][param_key] = num_value
 
@@ -212,6 +213,10 @@ class ClusteringModelForm():
 
         if model not in self.temp_config_data:
             self.temp_config_data[model] = {}
+
+        if any(key.endswith("_range") for key in self.temp_config_data[model]) and not self.grid_search.get():
+            self.grid_search.set(True)
+
 
         param_label = tk.Label(self.model_frame, text=label_text)
         param_label.grid(row=row, column=0, padx=5, pady=5, sticky="w")
@@ -238,7 +243,7 @@ class ClusteringModelForm():
             return
             
         param_key = f"{param_key}_range"
-        value_range = self.temp_config_data[model].get(param_key, self.default_hyperparameters.get(param_key, {"min": 2, "max": 10, "step": 1}))
+        value_range = self.temp_config_data[model].get(param_key, copy.deepcopy(self.default_hyperparameters.get(param_key, {"min": 2, "max": 10, "step": 1})))
 
         self.temp_config_data[model].setdefault(param_key, value_range)
 
@@ -285,9 +290,17 @@ class ClusteringModelForm():
             self.temp_config_data[model].setdefault(param_key, [])
             
             listbox = tk.Listbox(self.model_frame, selectmode="multiple", height=len(options), exportselection=0)
+            
             for option in options:
                 listbox.insert(tk.END, option)
+            
             listbox.grid(row=row, column=1, columnspan=2, padx=5, pady=5)
+
+            selected_values = set(self.temp_config_data[model][param_key])  
+        
+            for i, option in enumerate(options):
+                if option in selected_values:
+                    listbox.selection_set(i)
 
             listbox.bind('<<ListboxSelect>>', lambda event: self.update_selected_values_listbox(event, listbox, options, model, param_key))
             return
@@ -392,6 +405,7 @@ class ClusteringModelForm():
 
     def clear_and_close_form(self):
         self.temp_config_data = {}
+        self.grid_search.set(False)
         self.top.destroy()
 
     def update_params(self, model):
@@ -431,7 +445,6 @@ class ClusteringModelForm():
         self.config_data[model] = self.temp_config_data[model]
 
         self.top.destroy() 
-        tk.messagebox.showinfo("Clustering configuration", "Model saved successfully.")
            
 
     def delete_model(self):

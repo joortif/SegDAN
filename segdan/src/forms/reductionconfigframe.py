@@ -41,7 +41,7 @@ class ReductionConfigFrame(ttk.Frame):
         self.reduction_config_widgets()
 
         button_frame = ttk.Frame(self.reduction_frame)
-        button_frame.grid(row=11, column=0, columnspan=5, pady=10)  
+        button_frame.grid(row=11, column=0, columnspan=5, pady=10, sticky="e")  
 
         self.reduction_frame.grid_rowconfigure(0, weight=0)
         self.reduction_frame.grid_columnconfigure(0, weight=0)
@@ -51,7 +51,7 @@ class ReductionConfigFrame(ttk.Frame):
         button_back.grid(row=0, column=0, padx=50, pady=5, sticky="w")
 
         button_next = ttk.Button(button_frame, text="Next", command=self.next)
-        button_next.grid(row=0, column=1, padx=50, pady=5, sticky="e")
+        button_next.grid(row=0, column=1, pady=5, sticky="e")
 
         button_frame.grid_columnconfigure(0, weight=0)
         button_frame.grid_columnconfigure(1, weight=0)
@@ -78,29 +78,32 @@ class ReductionConfigFrame(ttk.Frame):
         
         vcmd = (self.top.register(self.validate_numeric), "%P")
 
-        self.reduction_type_label = tk.Label(self.reduction_frame, text="Reduction type *")
-        self.reduction_type_combobox = ttk.Combobox(self.reduction_frame, textvariable=self.reduction_data["reduction_type"], values=reduction_types, state="readonly", width=15)
+        self.reduction_config_labelframe = ttk.LabelFrame(self.reduction_frame, text="Reduction configuration", padding=(20, 10))
+        self.reduction_config_labelframe.grid(row=0, column=0, padx=5, pady=10, columnspan=2, sticky="ew")
+
+        self.reduction_type_label = tk.Label(self.reduction_config_labelframe, text="Reduction type *")
+        self.reduction_type_combobox = ttk.Combobox(self.reduction_config_labelframe, textvariable=self.reduction_data["reduction_type"], values=reduction_types, state="readonly", width=15)
         ToolTip(self.reduction_type_label, msg="Strategy for selecting the subset of images from each cluster.")
 
-        self.reduction_percentage_label = tk.Label(self.reduction_frame, text="Reduction percentage *")
-        self.reduction_percentage_entry = tk.Entry(self.reduction_frame, textvariable=self.reduction_data['reduction_percentage'], width=10, validate="key", validatecommand=vcmd)
+        self.reduction_percentage_label = tk.Label(self.reduction_config_labelframe, text="Reduction percentage *")
+        self.reduction_percentage_entry = tk.Entry(self.reduction_config_labelframe, textvariable=self.reduction_data['reduction_percentage'], width=10, validate="key", validatecommand=vcmd)
         ToolTip(self.reduction_percentage_label, msg="Percentage of the dataset retained after reduction.")
 
-        self.diverse_percentage_label = tk.Label(self.reduction_frame, text="Diverse percentage *")
-        self.diverse_percentage_entry = tk.Entry(self.reduction_frame, textvariable=self.reduction_data['diverse_percentage'], width=10, validate="key", validatecommand=vcmd)
+        self.diverse_percentage_label = tk.Label(self.reduction_config_labelframe, text="Diverse percentage *")
+        self.diverse_percentage_entry = tk.Entry(self.reduction_config_labelframe, textvariable=self.reduction_data['diverse_percentage'], width=10, validate="key", validatecommand=vcmd)
         ToolTip(self.diverse_percentage_label, msg="Specifies the percentage of diverse images to keep from each cluster, ensuring variety instead of only the most representative ones.")
 
-        self.reduction_model_label = tk.Label(self.reduction_frame, text="Reduction model *")
+        self.reduction_model_label = tk.Label(self.reduction_config_labelframe, text="Reduction model *")
         ToolTip(self.reduction_model_label, msg="Clustering model to use for reducing the dataset.")
 
-        self.reduction_model_combobox = ttk.Combobox(self.reduction_frame, textvariable=self.reduction_data["reduction_model"], width=15, values=self.reduction_models, state="readonly")
+        self.reduction_model_combobox = ttk.Combobox(self.reduction_config_labelframe, textvariable=self.reduction_data["reduction_model"], width=15, values=self.reduction_models, state="readonly")
 
-        self.use_reduced_label = tk.Label(self.reduction_frame, text="Use reduced dataset *")
-        self.use_reduced_checkbt = ttk.Checkbutton(self.reduction_frame, variable=self.reduction_data["use_reduced"])
+        self.use_reduced_label = tk.Label(self.reduction_config_labelframe, text="Use reduced dataset *")
+        self.use_reduced_checkbt = ttk.Checkbutton(self.reduction_config_labelframe, variable=self.reduction_data["use_reduced"])
         ToolTip(self.use_reduced_label, msg="Whether to use the reduced dataset in the training step.")
 
-        self.include_outliers_label = tk.Label(self.reduction_frame, text="Include outliers *")
-        self.include_outliers_checkbt = ttk.Checkbutton(self.reduction_frame, variable=self.reduction_data["include_outliers"])
+        self.include_outliers_label = tk.Label(self.reduction_config_labelframe, text="Include outliers *")
+        self.include_outliers_checkbt = ttk.Checkbutton(self.reduction_config_labelframe, variable=self.reduction_data["include_outliers"])
         ToolTip(self.include_outliers_label, msg="Include outlier images.\nThese images are marked with the label -1.")
 
         self.reduction_type_label.grid(row=self.row, column=0, padx=10, pady=5)
@@ -203,10 +206,6 @@ class ReductionConfigFrame(ttk.Frame):
             if diverse_value >= 1.0:
                 tk.messagebox.showerror("Reduction configuration error", "Diverse percentage can't be equal or greater than 1.")
                 return False
-
-            if diverse_value == 0.0:
-                tk.messagebox.showerror("Reduction configuration error", "Diverse percentage can't be 0.")
-                return False
             
             if reduc_value < diverse_value:
                 tk.messagebox.showerror("Reduction configuration error", "Diverse percentage can't be greater than the reduction percentage.")
@@ -226,5 +225,4 @@ class ReductionConfigFrame(ttk.Frame):
             return 
 
         self.config_data["reduction_data"].update(self.reduction_data)
-        tk.messagebox.showinfo("Reduction configuration", "Reduction configuration saved successfully.")
         self.controller.show_frame("TrainingConfigFrame")

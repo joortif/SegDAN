@@ -41,7 +41,7 @@ class GeneralConfigFrame(ttk.Frame):
         self.create_widgets()
         
         button_frame = ttk.Frame(self.general_frame)
-        button_frame.grid(row=14, column=0, columnspan=5, pady=10)  
+        button_frame.grid(row=15, column=0, columnspan=5, pady=10, sticky="e")  
 
         self.general_frame.grid_rowconfigure(7, weight=0)
         self.general_frame.grid_columnconfigure(0, weight=1)
@@ -50,7 +50,7 @@ class GeneralConfigFrame(ttk.Frame):
         button_back.grid(row=0, column=0, padx=50, pady=5, sticky="w")
 
         button_next = ttk.Button(button_frame, text="Next", command=self.next)
-        button_next.grid(row=0, column=1, padx=50, pady=5, sticky="e")
+        button_next.grid(row=0, column=1, pady=5, sticky="e")
 
         button_frame.grid_columnconfigure(0, weight=0)
         button_frame.grid_columnconfigure(1, weight=0)
@@ -73,62 +73,62 @@ class GeneralConfigFrame(ttk.Frame):
         vcmd = (self.top.register(self.validate_numeric), "%P")
         val_threshold = (self.top.register(self.validate_threshold), "%P")
 
-        self.color_map_label = tk.Label(self.general_frame, text="Color mapping")
-        self.transformation_color_dict_text = tk.Text(self.general_frame, height=5, width=20, state="disabled")
+        self.color_map_label = tk.Label(self.general_labelframe, text="Color mapping")
+        self.transformation_color_dict_text = tk.Text(self.general_labelframe, height=5, width=20, state="disabled")
         ToolTip(self.color_map_label, msg="Mapping of class IDs to colors.")
 
         self.transformation_color_dict_text.insert("1.0", str(self.general_data['color_dict']))  
         self.transformation_color_dict_text.config(state="disabled")  
 
-        self.add_color_bt = tk.Button(self.general_frame, text="Add dictionary", command=lambda: self.open_color_form())
+        self.add_color_bt = tk.Button(self.general_labelframe, text="Add dictionary", command=lambda: self.open_color_form())
         ToolTip(self.add_color_bt, msg="Add colors to the dictionary.")
 
-        self.class_map_label = tk.Label(self.general_frame, text="Class mapping")
-        self.class_mapping = ttk.Entry(self.general_frame, textvariable=self.general_data["class_map_file"], width=50, state="readonly")
-        self.class_map_bt = tk.Button(self.general_frame, text="Select file 📄", command=lambda: self.select_file("class_map_file", "txt"))
+        self.class_map_label = tk.Label(self.general_labelframe, text="Class mapping")
+        self.class_mapping = ttk.Entry(self.general_labelframe, textvariable=self.general_data["class_map_file"], width=50, state="readonly")
+        self.class_map_bt = tk.Button(self.general_labelframe, text="Select file 📄", command=lambda: self.select_file("class_map_file", "txt"))
         ToolTip(self.class_map_label, msg="Mapping of class IDs to names (format: ID:Name)")
         ToolTip(self.class_map_bt, msg="Select a file containing the class mapping.")
 
-        self.load_classmap_bt = tk.Button(self.general_frame, text="Load file 📄", command=lambda: self.load_file())
+        self.load_classmap_bt = tk.Button(self.general_labelframe, text="Load file 📄", command=lambda: self.load_file())
         ToolTip(self.load_classmap_bt, msg="Load the file containing the class mapping file")
         
-        self.image_path_label = tk.Label(self.general_frame, text="Image path *")
-        self.entry_images = ttk.Entry(self.general_frame, textvariable=self.general_data["image_path"], width=50, state="readonly")
-        self.img_path_bt = tk.Button(self.general_frame, text="Select folder 📂", command=lambda: self.select_folder("image_path"))
+        self.image_path_label = tk.Label(self.general_labelframe, text="Image path *")
+        self.entry_images = ttk.Entry(self.general_labelframe, textvariable=self.general_data["image_path"], width=50, state="readonly")
+        self.img_path_bt = tk.Button(self.general_labelframe, text="Select folder 📂", command=lambda: self.select_folder("image_path"))
         ToolTip(self.image_path_label, msg="Path to the folder containing the images of the dataset.")
         ToolTip(self.img_path_bt, msg="Select the folder containing the images.")
         
-        self.label_path_label = tk.Label(self.general_frame, text="Label path *")
-        self.label_entry = ttk.Entry(self.general_frame, textvariable=self.general_data["label_path"], width=50, state="readonly")
-        self.label_path_bt = tk.Button(self.general_frame, text="Select folder 📂", command=lambda: self.select_folder("label_path"))
+        self.label_path_label = tk.Label(self.general_labelframe, text="Label path *")
+        self.label_entry = ttk.Entry(self.general_labelframe, textvariable=self.general_data["label_path"], width=50, state="readonly")
+        self.label_path_bt = tk.Button(self.general_labelframe, text="Select folder 📂", command=lambda: self.select_folder("label_path"))
         ToolTip(self.label_path_label, msg="Path to the folder containing the labels of the dataset.")
         ToolTip(self.label_path_bt, msg="Select the folder containing the labels.")
         
-        self.label_file_bt = tk.Button(self.general_frame, text="Select file 📄", command=lambda: self.select_file("label_path", "json"))
+        self.label_file_bt = tk.Button(self.general_labelframe, text="Select file 📄", command=lambda: self.select_file("label_path", "json"))
         ToolTip(self.label_file_bt, msg="Select the annotation file.")
        
-        self.output_path_label = tk.Label(self.general_frame, text="Output path *")
-        self.output_entry = ttk.Entry(self.general_frame, textvariable=self.general_data["output_path"], width=50, state="readonly")
-        self.output_path_bt = tk.Button(self.general_frame, text="Select folder 📂", command=lambda: self.select_folder("output_path"))
+        self.output_path_label = tk.Label(self.general_labelframe, text="Output path *")
+        self.output_entry = ttk.Entry(self.general_labelframe, textvariable=self.general_data["output_path"], width=50, state="readonly")
+        self.output_path_bt = tk.Button(self.general_labelframe, text="Select folder 📂", command=lambda: self.select_folder("output_path"))
         ToolTip(self.label_path_label, msg="Path to the folder for the results created by the program.")
         ToolTip(self.output_path_bt, msg="Select the folder where the results will be saved.")
         
-        self.verbose_label = tk.Label(self.general_frame, text="Verbose")
-        self.binary_label = tk.Label(self.general_frame, text="Binary")
-        self.background_label = tk.Label(self.general_frame, text="Background")
-        self.binary_threshold_label = tk.Label(self.general_frame, text="Binary threshold")
+        self.verbose_label = tk.Label(self.general_labelframe, text="Verbose")
+        self.binary_label = tk.Label(self.general_labelframe, text="Binary")
+        self.background_label = tk.Label(self.general_labelframe, text="Background")
+        self.binary_threshold_label = tk.Label(self.general_labelframe, text="Binary threshold")
         
-        self.verbose_checkbutton = ttk.Checkbutton(self.general_frame, variable=self.general_data["verbose"])
+        self.verbose_checkbutton = ttk.Checkbutton(self.general_labelframe, variable=self.general_data["verbose"])
         ToolTip(self.verbose_label, msg="Enable detailed logging during execution.")
         
-        self.binary_checkbutton = ttk.Checkbutton(self.general_frame, variable=self.general_data["binary"], command=lambda: FormUtils.toggle_label_entry(self.general_data["binary"], self.binary_threshold_label, 
+        self.binary_checkbutton = ttk.Checkbutton(self.general_labelframe, variable=self.general_data["binary"], command=lambda: FormUtils.toggle_label_entry(self.general_data["binary"], self.binary_threshold_label, 
                                                                                                                           self.threshold_entry, None, 12, 3))
         ToolTip(self.binary_label, msg="Set to True for binary segmentation (foreground/background).")
         
-        self.background_entry = ttk.Entry(self.general_frame, textvariable=self.general_data["background"], width=5, validate="key", validatecommand=vcmd)
+        self.background_entry = ttk.Entry(self.general_labelframe, textvariable=self.general_data["background"], width=5, validate="key", validatecommand=vcmd)
         ToolTip(self.background_label, msg="Class label assigned to background pixels.")
 
-        self.threshold_entry = ttk.Entry(self.general_frame, textvariable=self.general_data["threshold"], width=5, validate="key", validatecommand=val_threshold)
+        self.threshold_entry = ttk.Entry(self.general_labelframe, textvariable=self.general_data["threshold"], width=5, validate="key", validatecommand=val_threshold)
         ToolTip(self.binary_threshold_label, msg="Binary label threshold value for two-class segmentation.\nIt must be between 0 and 255.")
 
         self.row+=1
@@ -186,7 +186,7 @@ class GeneralConfigFrame(ttk.Frame):
 
 
     def open_color_form(self):
-        color_form = ColorConfigForm(self.top)
+        color_form = ColorConfigForm(self.top, self.general_data["color_dict"])
 
         color_form.top.transient(self.top)
         color_form.top.grab_set()
@@ -198,14 +198,14 @@ class GeneralConfigFrame(ttk.Frame):
         self.top.wait_window(color_form.top)
 
         if color_form.colors:
-            self.add_color(color_form.colors)
+            self.add_colors(color_form.colors)
             return
         
         self.transformation_color_dict_text.config(state="normal")  
         self.transformation_color_dict_text.delete(1.0, tk.END) 
         self.transformation_color_dict_text.config(state="disabled")
 
-    def add_color(self, colors):
+    def add_colors(self, colors):
         self.general_data["color_dict"] = colors
 
         colors_text = "\n".join([f"{color}: {class_id}" for color, class_id in colors.items()])
@@ -219,15 +219,18 @@ class GeneralConfigFrame(ttk.Frame):
         self.general_frame = tk.Frame(self, padx=10, pady=10)
         self.general_frame.grid(row=1, column=0, padx=10, pady=10)
 
+        self.general_labelframe = ttk.LabelFrame(self.general_frame, text="General configuration", padding=(20,10))
+        self.general_labelframe.grid(row=0, column=0, padx=5, pady=10, sticky="ew")
+
         self.grid_rowconfigure(0, weight=0)
         self.grid_columnconfigure(0, weight=1)
 
         self.row=0
-        self.label_format_label = tk.Label(self.general_frame, text="Label format")
+        self.label_format_label = tk.Label(self.general_labelframe, text="Label format")
         self.label_format_label.grid(row=self.row, column=1, padx=10)
 
         self.row+=1
-        self.label_format_dropdown = ttk.Combobox(self.general_frame, textvariable=self.general_data["label_format"], values=ConfigHandler.CONFIGURATION_VALUES["label_formats"], state="readonly", width=15)
+        self.label_format_dropdown = ttk.Combobox(self.general_labelframe, textvariable=self.general_data["label_format"], values=ConfigHandler.CONFIGURATION_VALUES["label_formats"], state="readonly", width=15)
         self.label_format_dropdown.grid(row=self.row, column=1, padx=10, pady=5) 
         ToolTip(self.label_format_label, msg="Select the label format.\nTXT for YOLO, JSON for COCO and mask for multiple labels per image.")
 
@@ -246,6 +249,19 @@ class GeneralConfigFrame(ttk.Frame):
             self.general_data[file_type].set(file_path)
             self.toggle_load_button()
 
+    def update_color_map(self):
+
+        class_mapping = self.general_data["class_mapping"]
+        color_map = self.general_data["color_dict"]
+
+        for class_name, class_id in class_mapping.items():
+            if class_id not in color_map:
+                color_map[class_id] = ""
+
+        self.general_data["color_dict"] = color_map
+        self.add_colors(color_map)
+
+
     def load_file(self):
         file_path = self.general_data["class_map_file"].get().strip()
         if file_path:
@@ -261,12 +277,14 @@ class GeneralConfigFrame(ttk.Frame):
                             if class_name == "":
                                 messagebox.showerror("Class file configuration error", f"ID {class_id} does not have any class name assigned.")
                                 return
-                            class_mapping[class_name.strip()] = int(class_id.strip())
+                            class_mapping[int(class_id.strip())] = class_name.strip()
                         else:
                             messagebox.showerror("Class file configuration error", "Invalid class mapping format. Each line should be in 'id:class_name' format.")
                             return
                     
                     self.general_data["class_mapping"] = class_mapping
+                    if self.general_data["label_format"].get() == "mask":
+                        self.update_color_map()
                     messagebox.showinfo("Success", "Class mapping file loaded successfully.")
             except Exception as e:
                 messagebox.showerror("Class file configuration error", f"Failed to load file: {e}")
@@ -377,20 +395,22 @@ class GeneralConfigFrame(ttk.Frame):
         if label_format == "mask":
             label_ext = ConfigHandler.VALID_IMAGE_EXTENSIONS
 
-        label_files = [f for f in os.listdir(label_path) if os.path.isfile(os.path.join(label_path, f))]
-        if len(label_files) == 0:
-            tk.messagebox.showerror("General configuration error", "The selected label folder does not contain images.")
-            return False
+        if label_format != "json":
 
-        non_valid_labels = [f for f in label_files if os.path.isfile(os.path.join(label_path, f)) and not f.lower().endswith(tuple(label_ext))]
+            label_files = [f for f in os.listdir(label_path) if os.path.isfile(os.path.join(label_path, f))]
+            if len(label_files) == 0:
+                tk.messagebox.showerror("General configuration error", "The selected label folder does not contain images.")
+                return False
 
-        if non_valid_labels:
-            if len(non_valid_labels) <10:   
-                messagebox.showerror("General configuration error", f"The folder contains labels with invalid extensions:\n{', '.join(non_valid_labels)}")
-            else:
-                messagebox.showerror("General configuration error", f"The folder contains labels with invalid extensions (showing first 10 invalid files):\n{', '.join(non_valid_labels[:10])}")
+            non_valid_labels = [f for f in label_files if os.path.isfile(os.path.join(label_path, f)) and not f.lower().endswith(tuple(label_ext))]
 
-            return False
+            if non_valid_labels:
+                if len(non_valid_labels) <10:   
+                    messagebox.showerror("General configuration error", f"The folder contains labels with invalid extensions:\n{', '.join(non_valid_labels)}")
+                else:
+                    messagebox.showerror("General configuration error", f"The folder contains labels with invalid extensions (showing first 10 invalid files):\n{', '.join(non_valid_labels[:10])}...")
+
+                return False
 
         output_path = self.general_data["output_path"].get().strip()
 
@@ -401,6 +421,16 @@ class GeneralConfigFrame(ttk.Frame):
         if self.general_data["binary"].get() and self.general_data["threshold"].get().strip() == "":
             tk.messagebox.showerror("General configuration error", "You must select a threshold when the labels are binary.")
             return False
+        
+        colors = self.general_data["color_dict"]
+        
+        if self.general_data["color_dict"] and not all(color == "" for color in colors.values()):
+        
+            for class_id, color in colors.items():
+                if color == "":
+                    tk.messagebox.showerror("General configuration error", f"Missing color for {class_id}. All classes must have a color.")
+                    return False
+
         
         if self.general_data["background"].get().strip():
             background_value = int(self.general_data["background"].get())

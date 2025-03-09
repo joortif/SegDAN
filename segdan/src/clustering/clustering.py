@@ -41,37 +41,4 @@ def cluster_images(clustering_data: dict, dataset: ImageDataset, embeddings, out
         model = ClusteringModel(clust_model, args, embeddings, evaluation_metric,vis_technique, plot, output_dir)
         results[model_name] = model.train(model_name, verbose)
 
-    if len(results.keys()) == 1:
-        return results
-
-    if evaluation_metric == 'davies':
-        best_model = min(results.items(), key=lambda item: item[1][-1])
-    else:
-        best_model = max(results.items(), key=lambda item: item[1][-1])
-
-    model_name = best_model[0]
-    model_score = best_model[1][-1]  
-    best_model_config = {
-        'model_name': model_name,
-        'score': model_score
-    }
-
-    model_params = clustering_models.get(model_name, {})
-
-    logger.info(f"Best model: {model_name}")
-    logger.info(f"Score ({evaluation_metric}): {model_score}")
-    logger.info("Best parameters:")
-
-    for param, value in model_params.items():
-        best_value = best_model[1][list(model_params.keys()).index(param)]
-
-        if '_range' in param:
-            param = param.replace('_range', '')
-
-        if param == 'random_state':
-            best_value = value
-
-        logger.info(f"  {param}: {best_value}")
-        best_model_config[param] = best_value
-
-    return best_model_config
+    return results

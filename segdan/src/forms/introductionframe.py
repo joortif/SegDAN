@@ -26,16 +26,18 @@ class IntroductionFrame(ttk.Frame):
         for option in options:
             ttk.Label(list_frame, text=f"• {option}", font=("Arial", 10),wraplength=500).pack(pady=10)
 
-        link_text = "*Active learning"
-        label_link = tk.Label(self, text=link_text, fg="blue", cursor="hand2")
-        f = font.Font(label_link, label_link.cget("font"))
-        f.configure(underline=True)
-        label_link.configure(font=f)
-        label_link.pack(pady=(0, 15), padx=10)
+        ttk.Label(self, text="If you already have a configuration file (YAML or JSON) it can be directly loaded into the application.").pack(pady=10)
 
-        label_link.bind("<Button-1>", lambda e: webbrowser.open("https://en.wikipedia.org/wiki/Active_learning_(machine_learning)"))
+        button_frame = ttk.Frame(self)
+        button_frame.pack(pady=10)
 
-        button = ttk.Button(self, text="Next", command=lambda: controller.show_frame("GeneralConfigFrame"))
-        button.pack()
+        configuration_load_bt = ttk.Button(button_frame, text="Load configuration file", command=lambda: controller.show_frame("ConfigFileLoaderFrame"))
+        configuration_load_bt.pack(side="left", padx=10)
+
+        button = ttk.Button(button_frame, text="Next", command=lambda: controller.show_frame("GeneralConfigFrame"))
+        button.pack(side="left", padx=10)
+
+
+        
 
     

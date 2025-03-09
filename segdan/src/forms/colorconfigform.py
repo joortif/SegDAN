@@ -4,13 +4,15 @@ from tkinter import messagebox, colorchooser
 
 
 class ColorConfigForm():
-    def __init__(self, parent):
+    def __init__(self, parent, color_map):
         self.top = tk.Toplevel(parent)
         self.top.title("Color dictionary configuration")
 
-        self.colors = {}
+        self.original_color_map = color_map
+        self.colors = self.original_color_map.copy()
 
         self.create_widgets()
+        self.populate_listbox()
 
     def create_widgets(self):
         self.row = 0
@@ -27,7 +29,11 @@ class ColorConfigForm():
 
         self.row += 1
 
-        tk.Button(self.top, text="Add class", command=self.add_class).grid(row=self.row, column=0, columnspan=3, pady=10)
+        self.button_frame = tk.Frame(self.top)
+        self.button_frame.grid(row=self.row, column=0, columnspan=3, pady=10)
+
+        tk.Button(self.button_frame, text="Add class", command=self.add_class).grid(row=0, column=0, padx=10, pady=10)
+        tk.Button(self.button_frame, text="Remove class", command=self.remove_class).grid(row=0, column=1, padx=10, pady=5)
 
         self.row += 1
 
@@ -41,9 +47,16 @@ class ColorConfigForm():
 
         self.row += 1
 
-        tk.Button(self.top, text="Save configuration", command=self.close_form).grid(row=self.row, column=0, columnspan=3, pady=10)
+        tk.Button(self.top, text="Save configuration", command=self.top.destroy).grid(row=self.row, column=0, columnspan=3, pady=10)
 
         self.selected_color = None
+
+        self.top.protocol("WM_DELETE_WINDOW", self.reset_and_close_form)
+
+
+    def populate_listbox(self):
+        for class_id, color in self.colors.items():
+            self.classes_listbox.insert(tk.END, f"Class {class_id}: {color}")
 
     def select_color(self):
         color_code = colorchooser.askcolor()[1]  
@@ -51,6 +64,16 @@ class ColorConfigForm():
             self.selected_color = self.hex_to_rgb(color_code)
             self.color_display.config(bg=color_code)
             self.color_display.grid()
+
+    def remove_class(self):
+        selected_index = self.classes_listbox.curselection()
+        if not selected_index:
+            messagebox.showwarning("Warning", "Please select a class to remove.")
+            return
+        item_text = self.classes_listbox.get(selected_index)
+        class_id = int(item_text.split(":")[0].split()[1])
+        del self.colors[class_id]
+        self.classes_listbox.delete(selected_index)
     
     def add_class(self):
         class_id = self.class_id_entry.get()
@@ -89,8 +112,6 @@ class ColorConfigForm():
         rgb = tuple(int(hex_color[i:i+2], 16) for i in (0, 2, 4)) 
         return rgb
     
-    def close_form(self):
+    def reset_and_close_form(self):
+        self.colors = self.original_color_map
         self.top.destroy()
-        if self.colors:  
-            messagebox.showinfo("Color dictionary configuration", "Color dictionary saved successfully.")
-        

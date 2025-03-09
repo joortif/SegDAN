@@ -39,30 +39,31 @@ class ClusteringConfigFrame(ttk.Frame):
                 }
             self.clustering_data = self.config_data["clustering_data"]
             self.controller = controller
-            self.row=0
 
             self.grid_rowconfigure(0, weight=0)
             self.grid_columnconfigure(0, weight=1)
 
             label_title = ttk.Label(self, text="Image embedding and clustering", font=("Arial", 18, "bold"))
-            label_title.grid(row=self.row, column=0, columnspan=5, pady=(20,10), padx=10)
+            label_title.grid(row=0, column=0, columnspan=5, pady=(20,10), padx=10)
             
             self.clustering_frame = tk.Frame(self, padx=10, pady=10)
-            self.clustering_frame.grid(row=self.row+1, column=0, padx=10, pady=10)
+            self.clustering_frame.grid(row=1, column=0, padx=10, pady=10)
 
             self.clustering_config_widgets()
 
             button_frame = ttk.Frame(self.clustering_frame)
-            button_frame.grid(row=9, column=0, columnspan=5, pady=10)  
+            button_frame.grid(row=9, column=0, columnspan=5, pady=10, sticky="e")  
 
             self.clustering_frame.grid_rowconfigure(0, weight=0)
-            self.clustering_frame.grid_columnconfigure(0, weight=1)
+            self.clustering_frame.grid_columnconfigure(0, weight=0)
+            self.clustering_frame.grid_columnconfigure(1, weight=0)
+
 
             button_back = ttk.Button(button_frame, text="Back", command=lambda: controller.show_frame("ClusteringFrame"))
             button_back.grid(row=0, column=0, padx=50, pady=5, sticky="w")
 
             button_next = ttk.Button(button_frame, text="Next", command=self.next)
-            button_next.grid(row=0, column=1, padx=50, pady=5, sticky="e")
+            button_next.grid(row=0, column=1, pady=5, sticky="e")
 
             button_frame.grid_columnconfigure(0, weight=1)
             button_frame.grid_columnconfigure(1, weight=1)
@@ -76,116 +77,98 @@ class ClusteringConfigFrame(ttk.Frame):
 
         vcmd = (self.top.register(self.validate_numeric), "%P")
 
-        self.framework_label = tk.Label(self.clustering_frame, text="Framework *")
-        self.framework_label.grid(row=self.row, column=0, padx=5)
+        self.embedding_model_labelframe = ttk.LabelFrame(self.clustering_frame, text="Embedding model configuration", padding=(20, 10))
+
+        self.framework_label = tk.Label(self.embedding_model_labelframe, text="Framework *")
+        self.framework_label.grid(row=0, column=0, padx=5)
         ToolTip(self.framework_label, msg="Select the framework used for image embeddings.")
         
-        self.name_label = tk.Label(self.clustering_frame, text="Name *")
-        self.name_combobox = ttk.Combobox(self.clustering_frame, textvariable=self.clustering_data['embedding_model']["name"], state="readonly")
-        ToolTip(self.name_label, msg="Embedding model name.")
-        self.framework_combobox = ttk.Combobox(self.clustering_frame, textvariable=self.clustering_data['embedding_model']["framework"], values=frameworks, state="readonly", width=15)
+        self.name_label = tk.Label(self.embedding_model_labelframe, text="Name *")
+        self.name_combobox = ttk.Combobox(self.embedding_model_labelframe, textvariable=self.clustering_data['embedding_model']["name"], state="readonly")
 
-        self.other_name_label = tk.Label(self.clustering_frame, text="Custom model name")
-        self.other_name_entry = tk.Entry(self.clustering_frame, textvariable=self.clustering_data['embedding_model']["name_other"])
+        self.lbp_name_entry = tk.Entry(self.embedding_model_labelframe, textvariable=tk.StringVar(value="Local Binary Pattern (LBP)"), state="readonly", width=25)
+        ToolTip(self.name_label, msg="Embedding model name.")
+        self.framework_combobox = ttk.Combobox(self.embedding_model_labelframe, textvariable=self.clustering_data['embedding_model']["framework"], values=frameworks, state="readonly", width=15)
+
+        self.other_name_label = tk.Label(self.embedding_model_labelframe, text="Custom model name *")
+        self.other_name_entry = tk.Entry(self.embedding_model_labelframe, textvariable=self.clustering_data['embedding_model']["name_other"])
         ToolTip(self.other_name_label, msg="Custom embedding model name.")
 
-        self.custom_model_info_label = tk.Label(self.clustering_frame)
+        self.custom_model_info_label = tk.Label(self.embedding_model_labelframe)
 
-        self.resize_height_label = tk.Label(self.clustering_frame, text="Resize height *")  
-        self.resize_height_entry = tk.Entry(self.clustering_frame, textvariable=self.clustering_data['embedding_model']["resize_height"], width=10, validate="key", validatecommand=vcmd)
+        self.resize_height_label = tk.Label(self.embedding_model_labelframe, text="Resize height *")  
+        self.resize_height_entry = tk.Entry(self.embedding_model_labelframe, textvariable=self.clustering_data['embedding_model']["resize_height"], width=10, validate="key", validatecommand=vcmd)
         ToolTip(self.resize_height_label, msg="Image resizing height before applying the embedding model.")
 
-        self.resize_width_label = tk.Label(self.clustering_frame, text="Resize width *")        
-        self.resize_width_entry = tk.Entry(self.clustering_frame, textvariable=self.clustering_data['embedding_model']["resize_width"], width=10, validate="key", validatecommand=vcmd)
+        self.resize_width_label = tk.Label(self.embedding_model_labelframe, text="Resize width *")        
+        self.resize_width_entry = tk.Entry(self.embedding_model_labelframe, textvariable=self.clustering_data['embedding_model']["resize_width"], width=10, validate="key", validatecommand=vcmd)
         ToolTip(self.resize_width_label, msg="Image resizing width before applying the embedding model.")
 
-        self.batch_size_label = tk.Label(self.clustering_frame, text="Batch size *")  
-        self.batch_size_entry = tk.Entry(self.clustering_frame, textvariable=self.clustering_data['embedding_model']["embedding_batch_size"], width=10, validate="key", validatecommand=vcmd)
+        self.batch_size_label = tk.Label(self.embedding_model_labelframe, text="Batch size *")  
+        self.batch_size_entry = tk.Entry(self.embedding_model_labelframe, textvariable=self.clustering_data['embedding_model']["embedding_batch_size"], width=10, validate="key", validatecommand=vcmd)
         ToolTip(self.batch_size_label, msg="Defines the number of samples per training step. Larger values need more memory.")
 
-        self.lbp_radius_label = tk.Label(self.clustering_frame, text="LBP Radius *")        
-        self.lbp_radius_entry = tk.Entry(self.clustering_frame, textvariable=self.clustering_data['embedding_model']["lbp_radius"], width=10, validate="key", validatecommand=vcmd)
+        self.lbp_radius_label = tk.Label(self.embedding_model_labelframe, text="Radius *")        
+        self.lbp_radius_entry = tk.Entry(self.embedding_model_labelframe, textvariable=self.clustering_data['embedding_model']["lbp_radius"], width=10, validate="key", validatecommand=vcmd)
         ToolTip(self.lbp_radius_label, msg="Defines the neighborhood radius for LBP feature extraction.\nHigher values capture texture at a larger scale.")
 
-        self.lbp_num_points_label = tk.Label(self.clustering_frame, text="LBP Num Points *")       
-        self.lbp_num_points_entry = tk.Entry(self.clustering_frame, textvariable=self.clustering_data['embedding_model']["lbp_num_points"], width=10, validate="key", validatecommand=vcmd)
+        self.lbp_num_points_label = tk.Label(self.embedding_model_labelframe, text="Num Points *")       
+        self.lbp_num_points_entry = tk.Entry(self.embedding_model_labelframe, textvariable=self.clustering_data['embedding_model']["lbp_num_points"], width=10, validate="key", validatecommand=vcmd)
         ToolTip(self.lbp_num_points_label, msg="Number of sampling points around the defined radius.\nMore points capture finer texture details.")
 
-        self.lbp_method_label = tk.Label(self.clustering_frame, text="LBP Method *")
-        self.lbp_method_combobox = ttk.Combobox(self.clustering_frame, textvariable=self.clustering_data['embedding_model']["lbp_method"], values=lbp_methods, state="readonly",  width=15)
+        self.lbp_method_label = tk.Label(self.embedding_model_labelframe, text="Method *")
+        self.lbp_method_combobox = ttk.Combobox(self.embedding_model_labelframe, textvariable=self.clustering_data['embedding_model']["lbp_method"], values=lbp_methods, state="readonly",  width=15)
         ToolTip(self.lbp_method_label, msg="LBP computation method.\nEach method affects how texture patterns are generated.")
 
-        self.visualization_label = tk.Label(self.clustering_frame, text="Visualization technique *")
-        self.visualization_technique_combobox = ttk.Combobox(self.clustering_frame, textvariable=self.clustering_data["visualization_technique"], values=visualization_techniques, state="readonly", width=6)        
-        ToolTip(self.visualization_label, msg="Dimensionality reduction technique applied to the embeddings for plotting in 2D.")
+        self.embedding_model_labelframe.grid(row=0, column=0, padx=5, pady=10, columnspan=4, sticky="ew")
 
-        self.clustering_models_text = tk.Text(self.clustering_frame, height=5, width=15, state="disabled")
+        self.clustering_labelframe = ttk.LabelFrame(self.clustering_frame, text="Clustering configuration", padding=(20, 10))
+        self.clustering_labelframe.grid(row=1, column=0, padx=5, pady=10, columnspan=4, sticky="ew")
 
-        self.name_label.grid(row=self.row, column=1, padx=5, sticky="ew")       
-        self.resize_height_label.grid(row=self.row, column=1, padx=10)
-        self.resize_width_label.grid(row=self.row, column=2, padx=10)
-        self.lbp_radius_label.grid(row=self.row, column=3, padx=10)
-        self.lbp_num_points_label.grid(row=self.row, column=4, padx=10)
-        self.lbp_method_label.grid(row=self.row, column=5, padx=10)
-        self.other_name_label.grid(row=self.row, column=2, pady=5, padx=5)
+        self.clustering_models_text = tk.Text(self.clustering_labelframe, height=5, width=15, state="disabled")
 
-        self.row+=1
 
-        self.framework_combobox.grid(row=self.row, column=0, pady=5, padx=5)
-        self.name_combobox.grid(row=self.row, column=1, padx=5, pady=5, columnspan=2, sticky="ew")      
-        self.resize_height_entry.grid(row=self.row, column=1, padx=10, pady=5)
-        self.resize_width_entry.grid(row=self.row, column=2, padx=10, pady=5)
-        self.lbp_radius_entry.grid(row=self.row, column=3, padx=10, pady=5)
-        self.lbp_num_points_entry.grid(row=self.row, column=4, padx=10, pady=5)
-        self.lbp_method_combobox.grid(row=self.row, column=5, padx=10, pady=5)
-        self.other_name_entry.grid(row=self.row, column=2, pady=5, padx=5)
-
-        self.row+=1
-
-        self.clustering_models_label = tk.Label(self.clustering_frame, text="Clustering models *")
-        self.clustering_models_label.grid(row=self.row, column=0, padx=10, pady=5)
+        self.clustering_models_label = tk.Label(self.clustering_labelframe, text="Clustering models *")
+        self.clustering_models_label.grid(row=0, column=0, padx=10, pady=5)
         ToolTip(self.clustering_models_label, msg="Clustering models list to use with the embeddings.")
 
-        self.clustering_metric_label = tk.Label(self.clustering_frame, text="Clustering metric *")
-        self.clustering_metric_label.grid(row=self.row, column=2, padx=10, pady=5)
+        self.clustering_metric_label = tk.Label(self.clustering_labelframe, text="Clustering metric *")
+        self.clustering_metric_label.grid(row=0, column=2, padx=10, pady=5)
 
         ToolTip(self.clustering_metric_label, msg="Metric that defines how similarity between image clusters is measured.")
         
-        self.row+=1
-
-        self.clustering_models_text.grid(row=self.row, column=0, padx=10, pady=5, rowspan=2)
+        self.clustering_models_text.grid(row=1, column=0, padx=10, pady=5, rowspan=2)
         
-        self.add_model_bt = tk.Button(self.clustering_frame, text="Add model", command=lambda: self.open_model_form())
-        self.add_model_bt.grid(row=self.row, column=1)
+        self.add_model_bt = tk.Button(self.clustering_labelframe, text="Add model", command=lambda: self.open_model_form())
+        self.add_model_bt.grid(row=1, column=1)
         ToolTip(self.add_model_bt, msg="Add a new clustering model.")
-        ttk.Combobox(self.clustering_frame, textvariable=self.clustering_data["clustering_metric"], values=clustering_metrics, state="readonly", width=10).grid(row=self.row, column=2)        
-        self.visualization_label.grid(row=self.row, column=1)
+        ttk.Combobox(self.clustering_labelframe, textvariable=self.clustering_data["clustering_metric"], values=clustering_metrics, state="readonly", width=10).grid(row=1, column=2)        
 
-        self.row+=1
-
-        self.edit_model_bt = tk.Button(self.clustering_frame, text="Edit model", command=lambda: self.open_model_form(edit=True))
-        self.edit_model_bt.grid(row=self.row, column=1)
+        self.edit_model_bt = tk.Button(self.clustering_labelframe, text="Edit model", command=lambda: self.open_model_form(edit=True))
+        self.edit_model_bt.grid(row=2, column=1)
         ToolTip(self.edit_model_bt, msg="Edit an existing clustering model.")
 
         self.edit_model_bt.grid_remove()
 
-        self.row+=1
+        self.visualization_labelframe = ttk.LabelFrame(self.clustering_frame, text="Visualization parameters", padding=(20, 10))
+        self.visualization_labelframe.grid(row=2, column=0, padx=5, pady=10, columnspan=4, sticky="ew")
 
-        self.clustering_plot_label = tk.Label(self.clustering_frame, text="Plot")
-        self.clustering_plot_label.grid(row=self.row, column=0, padx=10, pady=5)
+        self.visualization_label = tk.Label(self.visualization_labelframe, text="Visualization technique *")
+        self.visualization_technique_combobox = ttk.Combobox(self.visualization_labelframe, textvariable=self.clustering_data["visualization_technique"], values=visualization_techniques, state="readonly", width=6)        
+        ToolTip(self.visualization_label, msg="Dimensionality reduction technique applied to the embeddings for plotting in 2D.")
+
+        self.visualization_label.grid(row=1, column=1)
+
+
+        self.clustering_plot_label = tk.Label(self.visualization_labelframe, text="Plot")
+        self.clustering_plot_label.grid(row=0, column=0, padx=10, pady=5)
         ToolTip(self.clustering_plot_label, msg="Enables visualization of clustering results by reducing the dimensionality of the embeddings.\nPlots images in a 2 dimensional space.")
 
-        self.row+=1
+        ttk.Checkbutton(self.visualization_labelframe, variable=self.clustering_data["plot"], command=lambda: FormUtils.toggle_label_entry(self.clustering_data["plot"], self.visualization_label, 
+                                                                                                                          self.visualization_technique_combobox, None, 0, 1)).grid(row=1, column=0, padx=5, pady=5)
+        self.visualization_technique_combobox.grid(row=0, column=1, padx=10, pady=5)
 
-        ttk.Checkbutton(self.clustering_frame, variable=self.clustering_data["plot"], command=lambda: FormUtils.toggle_label_entry(self.clustering_data["plot"], self.visualization_label, 
-                                                                                                                          self.visualization_technique_combobox, None, self.row-2, 1)).grid(row=self.row, column=0, padx=5, pady=5)
-        self.visualization_technique_combobox.grid(row=self.row, column=1, padx=10, pady=5)
-
-        self.row+=1
-        self.batch_size_label.grid(row=self.row, column=0, padx=10, pady=5)
-
-        self.row+=1
-        self.batch_size_entry.grid(row=self.row, column=0, padx=10, pady=5)
+        
 
         self.framework_combobox.bind("<<ComboboxSelected>>", self.update_framework_fields)
         self.name_combobox.bind("<<ComboboxSelected>>", self.select_other_model)
@@ -197,6 +180,22 @@ class ClusteringConfigFrame(ttk.Frame):
         self.name_combobox.grid_forget()
         self.visualization_label.grid_forget()
         self.visualization_technique_combobox.grid_forget()
+
+        self.framework_combobox.grid(row=1, column=0, padx=10, pady=5)
+        self.name_label.grid(row=0, column=1, padx=10, pady=5)
+        self.lbp_name_entry.grid(row=1, column=1, padx=10, pady=5)
+        self.resize_height_label.grid(row=0, column=2, padx=10)
+        self.resize_height_entry.grid(row=1, column=2, padx=10, pady=5)
+        self.resize_width_label.grid(row=0, column=3, padx=10)
+        self.resize_width_entry.grid(row=1, column=3, padx=10, pady=5)
+        self.lbp_radius_label.grid(row=2, column=1, padx=10)
+        self.lbp_radius_entry.grid(row=3, column=1, padx=10, pady=5)
+        self.lbp_num_points_label.grid(row=2, column=2, padx=10)
+        self.lbp_num_points_entry.grid(row=3, column=2, padx=10, pady=5)
+        self.lbp_method_label.grid(row=2, column=3, padx=10)
+        self.lbp_method_combobox.grid(row=3, column=3, padx=10, pady=5)
+        self.batch_size_label.grid(row=2, column=0, padx=10, pady=5)
+        self.batch_size_entry.grid(row=3, column=0, padx=10, pady=5)
 
     def select_other_model(self, event):
 
@@ -247,6 +246,7 @@ class ClusteringConfigFrame(ttk.Frame):
 
         self.name_label.grid_remove()
         self.name_combobox.grid_remove()
+        self.lbp_name_entry.grid_remove()
         self.resize_height_label.grid_remove()
         self.resize_height_entry.grid_remove()
         self.resize_width_label.grid_remove()
@@ -263,16 +263,18 @@ class ClusteringConfigFrame(ttk.Frame):
         self.custom_model_info_label.grid_remove()
 
         if framework == "opencv":
-            self.resize_height_label.grid(row=0, column=1, padx=10)
-            self.resize_height_entry.grid(row=1, column=1, padx=10, pady=5)
-            self.resize_width_label.grid(row=0, column=2, padx=10)
-            self.resize_width_entry.grid(row=1, column=2, padx=10, pady=5)
-            self.lbp_radius_label.grid(row=0, column=3, padx=10)
-            self.lbp_radius_entry.grid(row=1, column=3, padx=10, pady=5)
-            self.lbp_num_points_label.grid(row=0, column=4, padx=10)
-            self.lbp_num_points_entry.grid(row=1, column=4, padx=10, pady=5)
-            self.lbp_method_label.grid(row=0, column=5, padx=10)
-            self.lbp_method_combobox.grid(row=1, column=5, padx=10, pady=5)
+            self.name_label.grid(row=0, column=1, padx=10, pady=5)
+            self.lbp_name_entry.grid(row=1, column=1, padx=10, pady=5)
+            self.resize_height_label.grid(row=0, column=2, padx=10)
+            self.resize_height_entry.grid(row=1, column=2, padx=10, pady=5)
+            self.resize_width_label.grid(row=0, column=3, padx=10)
+            self.resize_width_entry.grid(row=1, column=3, padx=10, pady=5)
+            self.lbp_radius_label.grid(row=2, column=1, padx=10)
+            self.lbp_radius_entry.grid(row=3, column=1, padx=10, pady=5)
+            self.lbp_num_points_label.grid(row=2, column=2, padx=10)
+            self.lbp_num_points_entry.grid(row=3, column=2, padx=10, pady=5)
+            self.lbp_method_label.grid(row=2, column=3, padx=10)
+            self.lbp_method_combobox.grid(row=3, column=3, padx=10, pady=5)
             return
 
         elif framework == "huggingface":
@@ -469,6 +471,5 @@ class ClusteringConfigFrame(ttk.Frame):
             return
         
         self.config_data["clustering_data"].update(self.clustering_data)
-        tk.messagebox.showinfo("Clustering configuration", "Clustering configuration saved successfully.")
         self.controller.show_frame("ReductionFrame")
-        print(self.config_data)
+        print(self.config_data["clustering_data"])

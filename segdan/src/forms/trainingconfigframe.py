@@ -3,6 +3,7 @@ from tkinter import ttk
 from tktooltip import ToolTip
 import numpy as np
 import json
+import yaml
 
 from src.utils.confighandler import ConfigHandler
 from src.forms.formutils import FormUtils
@@ -59,7 +60,7 @@ class TrainingConfigFrame(ttk.Frame):
         self.training_config_widgets()
 
         button_frame = ttk.Frame(self.training_frame)
-        button_frame.grid(row=11, column=0, columnspan=5, pady=10)  
+        button_frame.grid(row=11, column=0, columnspan=5, pady=10, sticky="e")  
 
         self.training_frame.grid_rowconfigure(0, weight=0)
         self.training_frame.grid_columnconfigure(0, weight=0)
@@ -70,7 +71,7 @@ class TrainingConfigFrame(ttk.Frame):
         button_back.grid(row=0, column=0, padx=50, pady=10, sticky="w")
 
         button_save = ttk.Button(button_frame, text="Save configuration", command=self.save)
-        button_save.grid(row=0, column=1, padx=50, pady=10, sticky="e")
+        button_save.grid(row=0, column=1, pady=10, sticky="e")
 
         button_frame.grid_columnconfigure(0, weight=0)
         button_frame.grid_columnconfigure(1, weight=0)
@@ -83,62 +84,69 @@ class TrainingConfigFrame(ttk.Frame):
         val_float = (self.top.register(self.validate_float), "%P")
         val_int = (self.top.register(self.validate_int), "%P")
 
-        self.hold_out_radiobt_yes = tk.Radiobutton(self.training_frame, text="Hold out", variable=self.split_method, value=True)
-        self.hold_out_radiobt_no = tk.Radiobutton(self.training_frame, text="Cross validation", variable=self.split_method, value=False)
+        self.dataset_config_labelframe = ttk.LabelFrame(self.training_frame, text="Dataset configuration", padding=(20,10))
+
+        self.hold_out_radiobt_yes = tk.Radiobutton(self.dataset_config_labelframe, text="Hold out", variable=self.split_method, value=True)
+        self.hold_out_radiobt_no = tk.Radiobutton(self.dataset_config_labelframe, text="Cross validation", variable=self.split_method, value=False)
         ToolTip(self.hold_out_radiobt_yes, msg="Splits the dataset into training, validation, and test sets in a single step.")
         ToolTip(self.hold_out_radiobt_no, msg="Repeatedly splits the dataset into training and validation sets to improve reliability; may significantly increase training time.")
 
-        self.train_percentage_label = tk.Label(self.training_frame, text="Train percentage *")
-        self.train_percentage_entry = tk.Entry(self.training_frame, textvariable=self.training_data['hold_out']['train'], width=10, validate="key", validatecommand=val_float)
-        self.valid_percentage_label = tk.Label(self.training_frame, text="Validation percentage *")
-        self.valid_percentage_entry = tk.Entry(self.training_frame, textvariable=self.training_data['hold_out']['valid'], width=10, validate="key", validatecommand=val_float)
-        self.test_percentage_label = tk.Label(self.training_frame, text="Test percentage *")
-        self.test_percentage_entry = tk.Entry(self.training_frame, textvariable=self.training_data['hold_out']['test'], width=10, validate="key", validatecommand=val_float)
+        self.train_percentage_label = tk.Label(self.dataset_config_labelframe, text="Train percentage *")
+        self.train_percentage_entry = tk.Entry(self.dataset_config_labelframe, textvariable=self.training_data['hold_out']['train'], width=10, validate="key", validatecommand=val_float)
+        self.valid_percentage_label = tk.Label(self.dataset_config_labelframe, text="Validation percentage *")
+        self.valid_percentage_entry = tk.Entry(self.dataset_config_labelframe, textvariable=self.training_data['hold_out']['valid'], width=10, validate="key", validatecommand=val_float)
+        self.test_percentage_label = tk.Label(self.dataset_config_labelframe, text="Test percentage *")
+        self.test_percentage_entry = tk.Entry(self.dataset_config_labelframe, textvariable=self.training_data['hold_out']['test'], width=10, validate="key", validatecommand=val_float)
         ToolTip(self.train_percentage_label, msg="Percentage of data allocated for training.")
         ToolTip(self.valid_percentage_label, msg="Percentage of data used for model validation.")
         ToolTip(self.test_percentage_label, msg="Percentage of data reserved for testing the model's performance.")
 
-        self.epochs_label = tk.Label(self.training_frame, text="Epochs *")
-        self.epochs_entry = tk.Entry(self.training_frame, textvariable=self.training_data['epochs'], width=10, validate="key", validatecommand=val_int)
-        ToolTip(self.epochs_label, msg="Number of times the entire dataset is passed through the model during training.")
-
-        self.stratification_label = tk.Label(self.training_frame, text="Stratification")
-        self.stratification_checkbt = ttk.Checkbutton(self.training_frame, variable=self.training_data["stratification"], command=lambda: FormUtils.toggle_label_entry(self.training_data["stratification"], self.stratification_type_label, 
+        self.stratification_label = tk.Label(self.dataset_config_labelframe, text="Stratification")
+        self.stratification_checkbt = ttk.Checkbutton(self.dataset_config_labelframe, variable=self.training_data["stratification"], command=lambda: FormUtils.toggle_label_entry(self.training_data["stratification"], self.stratification_type_label, 
                                                                                                                           self.stratification_type_combobox, None, 3, 1))   
         ToolTip(self.stratification_label, msg="Whether to maintain class distribution when splitting the dataset.")
 
-        self.stratification_type_label = tk.Label(self.training_frame, text="Stratification type")
-        self.stratification_type_combobox = ttk.Combobox(self.training_frame, textvariable=self.training_data["stratification_type"], values=stratification_types, state="readonly")
+        self.stratification_type_label = tk.Label(self.dataset_config_labelframe, text="Stratification type")
+        self.stratification_type_combobox = ttk.Combobox(self.dataset_config_labelframe, textvariable=self.training_data["stratification_type"], values=stratification_types, state="readonly")
         ToolTip(self.stratification_type_label, msg="Method used for stratifying the dataset (e.g., by pixel distribution, number of objects from each class...)")
 
-        self.num_folds_label = tk.Label(self.training_frame, text="Number of folds *")
-        self.num_folds_entry = ttk.Entry(self.training_frame, textvariable=self.training_data["cross_val"]["num_folds"], width=10, validate="key", validatecommand=val_int)
+        self.num_folds_label = tk.Label(self.dataset_config_labelframe, text="Number of folds *")
+        self.num_folds_entry = ttk.Entry(self.dataset_config_labelframe, textvariable=self.training_data["cross_val"]["num_folds"], width=10, validate="key", validatecommand=val_int)
         ToolTip(self.num_folds_label, msg="Number of groups into which the dataset is split for cross-validation.")
 
-        self.batch_size_label = tk.Label(self.training_frame, text="Batch size *")
-        self.batch_size_entry = tk.Entry(self.training_frame, textvariable=self.training_data['batch_size'], width=10, validate="key", validatecommand=val_int)
-        ToolTip(self.batch_size_label, msg="Number of samples processed together before updating the model.\nTypically a multiple of 2 (e.g., 8, 16, 32, 64).")
+        self.model_config_labelframe = ttk.LabelFrame(self.training_frame, text="Segmentation model configuration")
 
-        self.segmentation_type_label = tk.Label(self.training_frame, text="Segmentation type")
-        self.segmentation_type_combobox = ttk.Combobox(self.training_frame, textvariable=self.training_data["segmentation"], values=segmentation_types, state="readonly", width=10)
+        self.segmentation_type_label = tk.Label(self.model_config_labelframe, text="Segmentation type")
+        self.segmentation_type_combobox = ttk.Combobox(self.model_config_labelframe, textvariable=self.training_data["segmentation"], values=segmentation_types, state="readonly", width=10)
         ToolTip(self.segmentation_type_label, msg="Method used for segmenting images in the dataset.")
 
-        self.evaluation_metrics_label = tk.Label(self.training_frame, text="Evaluation metrics *")
-        self.evaluation_metrics_listbox = tk.Listbox(self.training_frame, selectmode="multiple", height=len(metrics), exportselection=0)
-        ToolTip(self.evaluation_metrics_label, msg="Metrics used to assess model performance    .")
+        self.evaluation_metrics_label = tk.Label(self.model_config_labelframe, text="Evaluation metrics *")
+        self.evaluation_metrics_listbox = tk.Listbox(self.model_config_labelframe, selectmode="multiple", height=len(metrics), exportselection=0)
+        ToolTip(self.evaluation_metrics_label, msg="Metrics used to assess model performance.")
 
-        self.segmentation_selection_metric_label = tk.Label(self.training_frame, text="Segmentation model selection metric", wraplength=150) 
-        self.segmentation_selection_metric_combobox = ttk.Combobox(self.training_frame, textvariable=self.training_data["selection_metric"], values=metrics, state="readonly", width=10)
+        self.segmentation_selection_metric_label = tk.Label(self.model_config_labelframe, text="Segmentation model selection metric", wraplength=150) 
+        self.segmentation_selection_metric_combobox = ttk.Combobox(self.model_config_labelframe, textvariable=self.training_data["selection_metric"], values=metrics, state="readonly", width=10)
         ToolTip(self.segmentation_selection_metric_label, msg="Metric used to choose the best segmentation model.")
 
-        self.segmentation_type_combobox.bind("<<ComboboxSelected>>", self.update_models_list)
+        self.epochs_label = tk.Label(self.model_config_labelframe, text="Epochs *")
+        self.epochs_entry = tk.Entry(self.model_config_labelframe, textvariable=self.training_data['epochs'], width=10, validate="key", validatecommand=val_int)
+        ToolTip(self.epochs_label, msg="Number of times the entire dataset is passed through the model during training.")
 
-        self.segmentation_models_label = tk.Label(self.training_frame, text="Segmentation models *")
-        self.segmentation_models_listbox = tk.Listbox(self.training_frame, selectmode="multiple", height=len(self.models_list), exportselection=0)
+        self.batch_size_label = tk.Label(self.model_config_labelframe, text="Batch size *")
+        self.batch_size_entry = tk.Entry(self.model_config_labelframe, textvariable=self.training_data['batch_size'], width=10, validate="key", validatecommand=val_int)
+        ToolTip(self.batch_size_label, msg="Number of samples processed together before updating the model.\nTypically a multiple of 2 (e.g., 8, 16, 32, 64).")
+
+        self.segmentation_models_label = tk.Label(self.model_config_labelframe, text="Segmentation models *")
+        self.segmentation_models_listbox = tk.Listbox(self.model_config_labelframe, selectmode="multiple", height=len(self.models_list), exportselection=0)
         ToolTip(self.segmentation_models_label, msg="List of segmentation models available for training and evaluation.")
+
+        self.dataset_config_labelframe.grid(row=0, column=0, padx=5, pady=10, columnspan=4, sticky="ew")
+        self.model_config_labelframe.grid(row=1, column=0, padx=5, pady=10, columnspan=3, sticky="ew")
 
         self.update_listbox(self.segmentation_models_listbox, self.models_list)
         self.update_listbox(self.evaluation_metrics_listbox, metrics)
+
+        self.segmentation_type_combobox.bind("<<ComboboxSelected>>", self.update_models_list)
 
         self.evaluation_metrics_listbox.bind('<<ListboxSelect>>', lambda event, listbox=self.evaluation_metrics_listbox, options=metrics: 
                     self.update_evaluation_metrics(event, listbox, options, "evaluation_metrics"))
@@ -175,19 +183,13 @@ class TrainingConfigFrame(ttk.Frame):
         self.segmentation_type_label.grid(row=self.row, column=0, padx=10, pady=10)
         self.evaluation_metrics_label.grid(row=self.row, column=1, padx=10, pady=10)
         self.segmentation_selection_metric_label.grid(row=self.row, column=2, padx=10, pady=10)
+        self.segmentation_models_label.grid(row=self.row, column=3, padx=5, pady=10)
         
         self.row +=1
         self.segmentation_type_combobox.grid(row=self.row, column=0, padx=10, pady=10)
         self.evaluation_metrics_listbox.grid(row=self.row, column=1, padx=10, pady=10)
         self.segmentation_selection_metric_combobox.grid(row=self.row, column=2, padx=10, pady=10)
-        
-        self.row+=1
-
-        self.segmentation_models_label.grid(row=self.row, column=0, padx=5, pady=10)
-
-        self.row+=1
-
-        self.segmentation_models_listbox.grid(row=self.row, column=0, padx=5, pady=10)
+        self.segmentation_models_listbox.grid(row=self.row, column=3, padx=5, pady=10)
 
         self.row +=1
 
@@ -372,7 +374,36 @@ class TrainingConfigFrame(ttk.Frame):
             self.config_data["training_data"].update(self.training_data)
             config_dict = FormUtils.save_config(self.config_data)
             self.final_dict.update(config_dict)
+            result = tk.messagebox.askquestion(message="Do you wish to save the full configuration in a JSON or YAML file?", title="Configuration saving")
+            if result == 'yes':
+                self.save_dict_local()
             self.top.quit()
-            tk.messagebox.showinfo("Training configuration", "Configuration successfully saved.")
+            self.top.destroy()            
+
+
+    def save_dict_local(self):
+        file_path = tk.filedialog.asksaveasfilename(
+        defaultextension=".yaml", 
+        filetypes=[("YAML files", "*.yaml;*.yml"), ("JSON files", "*.json")],
+        title="Save Configuration File"
+        )
+
+        if not file_path:
+            return  
+        
+        try:
+            if file_path.endswith(".json"):
+                with open(file_path, "w", encoding="utf-8") as json_file:
+                    json.dump(self.final_dict, json_file, indent=4)
+            elif file_path.endswith((".yaml", ".yml")):
+                with open(file_path, "w", encoding="utf-8") as yaml_file:
+                    yaml.dump(self.final_dict, yaml_file, default_flow_style=False, allow_unicode=True)
             
+            tk.messagebox.showinfo("Success", f"Configuration saved successfully!")
+
+            return
+
+        except Exception as e:
+            tk.messagebox.showerror("Error", f"Failed to save the file.\n\nError: {str(e)}")
+            return
 

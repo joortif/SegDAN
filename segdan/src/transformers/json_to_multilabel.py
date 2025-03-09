@@ -24,8 +24,7 @@ class JSONToMultilabelTransformer(Transformer):
 
         transformed_masks = []
 
-        json_path = os.listdir(input_data)
-        data = self._read_json(os.path.join(input_data, json_path[0]))
+        data = self._read_json(os.path.join(input_data))
         device = Utils.get_device(self.logger)
         depth_estimator = DepthEstimator(depth_model, device)
 
