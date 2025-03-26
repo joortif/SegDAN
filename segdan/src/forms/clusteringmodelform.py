@@ -167,7 +167,7 @@ class ClusteringModelForm():
         self.create_param_field("dbscan", "Min samples", "min_samples", row=1)
 
     def show_optics_params(self):
-        self.create_param_field("optics", "Eps ", "eps", row=0)
+        self.create_param_field("optics", "Min samples ", "min_samples", row=0)
 
     def update_int_grid_value(self, model, param_key, range_key, value):
         try:
@@ -363,8 +363,20 @@ class ClusteringModelForm():
                         tk.messagebox.showerror("Error", f"Min value of clusters range must be less than max value.")
                         return False
                 
-
             if model == "dbscan":
+                if "eps_range" in params:
+                    min_eps_range = params["eps_range"]["min"]
+                    max_eps_range = params["eps_range"]["max"]
+                    
+                    if min_eps_range == "" or max_eps_range == "" or params["eps_range"]["step"] == "":
+                        tk.messagebox.showerror("Error", "Eps range values cannot be empty.")
+                        return False
+
+                    if min_eps_range > max_eps_range:
+                        tk.messagebox.showerror("Error", f"Min value of eps range must be less than max value.")
+                        return False
+
+            if model in ["dbscan","optics"]:
                 if "min_samples" in params:
                     min_samples = params["min_samples"]
                     if min_samples == "":
@@ -386,19 +398,6 @@ class ClusteringModelForm():
                         return False
                     if min_samples_min > min_samples_max:
                         tk.messagebox.showerror("Error", f"Min value of min samples range must be less than max value.")
-                        return False
-
-            if model in ["dbscan", "optics"]:
-                if "eps_range" in params:
-                    min_eps_range = params["eps_range"]["min"]
-                    max_eps_range = params["eps_range"]["max"]
-                    
-                    if min_eps_range == "" or max_eps_range == "" or params["eps_range"]["step"] == "":
-                        tk.messagebox.showerror("Error", "Eps range values cannot be empty.")
-                        return False
-
-                    if min_eps_range > max_eps_range:
-                        tk.messagebox.showerror("Error", f"Min value of eps range must be less than max value.")
                         return False
 
         return True

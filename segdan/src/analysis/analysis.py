@@ -11,6 +11,7 @@ def _analyze_and_save_results(dataset: ImageDataset, output_path: str, verbose: 
     analysis_result_path = os.path.join(output_path, "analysis")
     os.makedirs(analysis_result_path, exist_ok=True)
 
+    print("Starting dataset analysis...")
     dataset.analyze(output=analysis_result_path, verbose=verbose)
 
     print(f"Dataset analysis ended successfully. Results saved in {analysis_result_path}")

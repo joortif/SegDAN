@@ -472,4 +472,3 @@ class ClusteringConfigFrame(ttk.Frame):
         
         self.config_data["clustering_data"].update(self.clustering_data)
         self.controller.show_frame("ReductionFrame")
-        print(self.config_data["clustering_data"])

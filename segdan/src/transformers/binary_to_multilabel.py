@@ -2,6 +2,7 @@ from src.transformers.transformer import Transformer
 from src.utils.imagelabelutils import ImageLabelUtils
 
 import numpy as np
+import gc
 import os
 import cv2
 from tqdm import tqdm
@@ -10,6 +11,7 @@ class BinaryToMultilabelTransformer(Transformer):
 
     def __init__(self):
         super().__init__()
+        self.MAX_SIZE = 4000
 
     def transform(self, input_data: str, output_dir: str, threshold: int = 255):
         masks = []
@@ -23,10 +25,26 @@ class BinaryToMultilabelTransformer(Transformer):
 
             mask = cv2.imread(label_path, cv2.IMREAD_GRAYSCALE)
 
+            height, width = mask.shape
+
+            if max(height, width) > self.MAX_SIZE:
+                scale = self.MAX_SIZE / max(height, width)
+
+                if max(height, width) > 2 * self.MAX_SIZE:
+                    mask = cv2.imread(label_path, cv2.IMREAD_REDUCED_GRAYSCALE_2)
+                    height, width = mask.shape  
+                    scale = self.MAX_SIZE / max(height, width)  
+                
+                new_size = (int(width * scale), int(height * scale))
+                mask = cv2.resize(mask, new_size, interpolation=cv2.INTER_AREA)
+
             converted_mask = (mask >= threshold).astype(np.uint8)  
 
             ImageLabelUtils.save_multilabel_mask(converted_mask, filename, output_dir)
             masks.append(converted_mask)
+
+            del mask, converted_mask             
+            gc.collect()
             
         return masks
 

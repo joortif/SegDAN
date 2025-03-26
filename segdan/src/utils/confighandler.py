@@ -45,13 +45,19 @@ class ConfigHandler():
         "reduction_type": ["representative", "diverse", "random"],
         "reduction_models": ["best_model", "kmeans", "agglomerative", "dbscan", "optics"],
 
-        "stratification_type": ["pixel_prop", "num_objects", "ratio"],
-
         "segmentation": ["semantic", "instance"],
-        "semantic_segmentation_models": ["unet", "deeplabv3", "segformer"],
-        "instance_segmentation_models": ["yolo"],
-        "segmentation_metric": ["iou", "dice_score"],
-        "stratification_types": ["pixels", "objects", "pixel_to_object_ratio"]
+        "semantic_segmentation_models": ["U-Net", "DeepLabV3", "Segformer", "FPN", "PSPNet"],
+        "instance_segmentation_models": ["YOLO", "Mask R-CNN"],
+        "semantic_metrics": ["Accuracy", "Precision", "Recall", "IoU (Intersection over Union)", "Dice score"],
+        "instance_metrics": ["Accuracy", "Precision", "Recall", "IoU (Intersection over Union)", "mAP"],
+
+        "stratification_types": ["pixels", "objects", "pixel_to_object_ratio"],
+
+        "model_sizes": {
+            "Small": "mobilenet_v2",
+            "Medium": "resnet34",
+            "Large": "resnet101",
+        }
     }
 
     FRAMEWORK_URLS = {

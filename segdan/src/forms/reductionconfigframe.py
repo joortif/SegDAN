@@ -82,7 +82,7 @@ class ReductionConfigFrame(ttk.Frame):
         self.reduction_config_labelframe.grid(row=0, column=0, padx=5, pady=10, columnspan=2, sticky="ew")
 
         self.reduction_type_label = tk.Label(self.reduction_config_labelframe, text="Reduction type *")
-        self.reduction_type_combobox = ttk.Combobox(self.reduction_config_labelframe, textvariable=self.reduction_data["reduction_type"], values=reduction_types, state="readonly", width=15)
+        self.reduction_type_combobox = ttk.Combobox(self.reduction_config_labelframe, textvariable=self.reduction_data['reduction_type'], values=reduction_types, state="readonly", width=15)
         ToolTip(self.reduction_type_label, msg="Strategy for selecting the subset of images from each cluster.")
 
         self.reduction_percentage_label = tk.Label(self.reduction_config_labelframe, text="Reduction percentage *")
@@ -96,7 +96,7 @@ class ReductionConfigFrame(ttk.Frame):
         self.reduction_model_label = tk.Label(self.reduction_config_labelframe, text="Reduction model *")
         ToolTip(self.reduction_model_label, msg="Clustering model to use for reducing the dataset.")
 
-        self.reduction_model_combobox = ttk.Combobox(self.reduction_config_labelframe, textvariable=self.reduction_data["reduction_model"], width=15, values=self.reduction_models, state="readonly")
+        self.reduction_model_combobox = ttk.Combobox(self.reduction_config_labelframe, width=15, values=self.reduction_models, state="readonly")
 
         self.use_reduced_label = tk.Label(self.reduction_config_labelframe, text="Use reduced dataset *")
         self.use_reduced_checkbt = ttk.Checkbutton(self.reduction_config_labelframe, variable=self.reduction_data["use_reduced"])
@@ -132,7 +132,7 @@ class ReductionConfigFrame(ttk.Frame):
         self.use_reduced_checkbt.grid(row=self.row, column=0, padx=10, pady=5)
 
         self.reduction_type_combobox.bind("<<ComboboxSelected>>", self.grid_diverse_percentage)
-        self.reduction_model_combobox.bind("<<ComboboxSelected>>", self.show_include_outliers)
+        self.reduction_model_combobox.bind("<<ComboboxSelected>>", self.on_combobox_select)
 
     def grid_diverse_percentage(self, event):
 
@@ -146,20 +146,22 @@ class ReductionConfigFrame(ttk.Frame):
         self.diverse_percentage_label.grid_remove()
         self.diverse_percentage_entry.grid_remove()
 
+    def on_combobox_select(self, event):
 
-    def add_model(self, model_config_data):
-        model_name = list(model_config_data.keys())[0]
+        selected_model = self.reduction_model_combobox.get()
 
-        if model_name == "best model":
-            self.reduction_data["reduction_model"] = "best_model"
+        if selected_model == "best model":
+            self.reduction_data["reduction_model"] = tk.StringVar(value="best_model")
         else:
-            self.reduction_data["reduction_model"] = model_name
+            self.reduction_data["reduction_model"] = tk.StringVar(value=selected_model)
+
+        self.show_include_outliers(event)        
 
     def show_include_outliers(self, event):
 
         reduction_model = self.reduction_data["reduction_model"].get()
 
-        if reduction_model == "dbscan" or reduction_model == "optics" or (reduction_model == "best model" and ("dbscan" in self.reduction_models or "optics" in self.reduction_models)):
+        if reduction_model == "dbscan" or reduction_model == "optics" or (reduction_model == "best_model" and ("dbscan" in self.reduction_models or "optics" in self.reduction_models)):
             self.include_outliers_label.grid(row=6, column=1, padx=10, pady=5)
             self.include_outliers_checkbt.grid(row=7, column=1, padx=10, pady=5)
             return
@@ -225,4 +227,4 @@ class ReductionConfigFrame(ttk.Frame):
             return 
 
         self.config_data["reduction_data"].update(self.reduction_data)
-        self.controller.show_frame("TrainingConfigFrame")
+        self.controller.show_frame("DatasetSplitFrame")

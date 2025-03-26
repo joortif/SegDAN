@@ -1,3 +1,4 @@
+import shutil
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 from tktooltip import ToolTip
@@ -85,12 +86,12 @@ class GeneralConfigFrame(ttk.Frame):
 
         self.class_map_label = tk.Label(self.general_labelframe, text="Class mapping")
         self.class_mapping = ttk.Entry(self.general_labelframe, textvariable=self.general_data["class_map_file"], width=50, state="readonly")
-        self.class_map_bt = tk.Button(self.general_labelframe, text="Select file 📄", command=lambda: self.select_file("class_map_file", "txt"))
+        self.class_map_bt = tk.Button(self.general_labelframe, text="Select file 📄", command= lambda: self.select_file("class_map_file", "txt"))
         ToolTip(self.class_map_label, msg="Mapping of class IDs to names (format: ID:Name)")
         ToolTip(self.class_map_bt, msg="Select a file containing the class mapping.")
 
-        self.load_classmap_bt = tk.Button(self.general_labelframe, text="Load file 📄", command=lambda: self.load_file())
-        ToolTip(self.load_classmap_bt, msg="Load the file containing the class mapping file")
+        self.clear_classmap_bt = tk.Button(self.general_labelframe, text="Delete file 📄", command= lambda: self.delete_file())
+        ToolTip(self.clear_classmap_bt, msg="Clears class mapping configuration.")
         
         self.image_path_label = tk.Label(self.general_labelframe, text="Image path *")
         self.entry_images = ttk.Entry(self.general_labelframe, textvariable=self.general_data["image_path"], width=50, state="readonly")
@@ -137,8 +138,8 @@ class GeneralConfigFrame(ttk.Frame):
         self.row+=1
         self.class_mapping.grid(row=self.row, column=0, columnspan=3, padx=5, pady=5)
         self.class_map_bt.grid(row=self.row, column=3, padx=5, pady=5)
-        self.load_classmap_bt.grid(row=self.row, column=5, padx=5, pady=5)
-        self.load_classmap_bt.grid_remove()
+        self.clear_classmap_bt.grid(row=self.row, column=6, padx=5, pady=5)
+        self.clear_classmap_bt.grid_remove()
 
         self.row+=1
         self.color_map_label.grid(row=self.row, column=0, padx=5, pady=5, sticky="w")
@@ -246,7 +247,11 @@ class GeneralConfigFrame(ttk.Frame):
         file_path = filedialog.askopenfilename(title="Select File", filetypes=filetypes)
         
         if file_path:
-            self.general_data[file_type].set(file_path)
+            self.general_data[file_type].set(file_path) 
+        
+            if file_type == "class_map_file":
+                self.load_class_map(file_path)
+            
             self.toggle_load_button()
 
     def update_color_map(self):
@@ -262,32 +267,35 @@ class GeneralConfigFrame(ttk.Frame):
         self.add_colors(color_map)
 
 
-    def load_file(self):
-        file_path = self.general_data["class_map_file"].get().strip()
-        if file_path:
-            try:
-                with open(file_path, 'r') as f:
-                    data = f.readlines()
-                    class_mapping = {}
-                    for line in data:
-                        parts = line.strip().split(":")
-                        if len(parts) == 2:
-                            class_id, class_name = parts
-                            class_name = class_name.strip()
-                            if class_name == "":
-                                messagebox.showerror("Class file configuration error", f"ID {class_id} does not have any class name assigned.")
-                                return
-                            class_mapping[int(class_id.strip())] = class_name.strip()
-                        else:
-                            messagebox.showerror("Class file configuration error", "Invalid class mapping format. Each line should be in 'id:class_name' format.")
+    def load_class_map(self, file_path):
+        try:
+            with open(file_path, 'r') as f:
+                data = f.readlines()
+                class_mapping = {}
+                for line in data:
+                    parts = line.strip().split(":")
+                    if len(parts) == 2:
+                        class_id, class_name = parts
+                        class_name = class_name.strip()
+                        if class_name == "":
+                            messagebox.showerror("Class file configuration error", f"ID {class_id} does not have any class name assigned.")
                             return
+                        class_mapping[int(class_id.strip())] = class_name.strip()
+                    else:
+                        messagebox.showerror("Class file configuration error", "Invalid class mapping format. Each line should be in 'id:class_name' format.")
+                        return
                     
-                    self.general_data["class_mapping"] = class_mapping
-                    if self.general_data["label_format"].get() == "mask":
-                        self.update_color_map()
-                    messagebox.showinfo("Success", "Class mapping file loaded successfully.")
-            except Exception as e:
+                self.general_data["class_mapping"] = class_mapping
+                    
+                if self.general_data["label_format"].get() == "mask":
+                    self.update_color_map()
+                messagebox.showinfo("Success", "Class mapping file loaded successfully.")
+        except Exception as e:
                 messagebox.showerror("Class file configuration error", f"Failed to load file: {e}")
+
+    def delete_file(self):
+        self.general_data["class_map_file"].set("")
+        self.general_data["class_mapping"] = {}
 
     def select_folder(self, key):
         folder = filedialog.askdirectory(title=f"Select {key.replace('_', ' ')}")
@@ -370,12 +378,12 @@ class GeneralConfigFrame(ttk.Frame):
             tk.messagebox.showerror("General configuration error", "You must select an image path before proceeding.")
             return False
 
-        files = [f for f in os.listdir(image_path) if os.path.isfile(os.path.join(image_path, f))]
-        if len(files) == 0:
+        images = [f for f in os.listdir(image_path) if os.path.isfile(os.path.join(image_path, f))]
+        if len(images) == 0:
             tk.messagebox.showerror("General configuration error", "The selected image folder does not contain images.")
             return False
 
-        non_images = [f for f in files if os.path.isfile(os.path.join(image_path, f)) and not f.lower().endswith(tuple(list(ConfigHandler.VALID_IMAGE_EXTENSIONS)))]
+        non_images = [f for f in images if os.path.isfile(os.path.join(image_path, f)) and not f.lower().endswith(tuple(list(ConfigHandler.VALID_IMAGE_EXTENSIONS)))]
 
         if non_images:
             if len(non_images) <10:   
@@ -411,6 +419,31 @@ class GeneralConfigFrame(ttk.Frame):
                     messagebox.showerror("General configuration error", f"The folder contains labels with invalid extensions (showing first 10 invalid files):\n{', '.join(non_valid_labels[:10])}...")
 
                 return False
+            
+            if len(label_files) != len(images):
+                img_names = {os.path.splitext(image)[0] for image in images}
+                label_names = {os.path.splitext(label)[0] for label in label_files}
+
+                images_not_in_labels = img_names - label_names
+
+                images_unmatched = [f for f in images if os.path.splitext(f)[0] in images_not_in_labels]
+
+                move_images = messagebox.askyesno("Missing label files", f"The following images don't have label files in the label directory:\n{', '.join(images_unmatched)} \n"
+                                    "All images need to have their respective labels for proper training.\nDo you wish to move these images automatically?")
+
+                if not move_images:
+                    return False
+                
+                save_path = os.path.join(os.path.dirname(image_path), "ignored_images")
+
+                os.makedirs(save_path,exist_ok=True)
+
+                for img in images_unmatched:
+                    src = os.path.join(image_path, img)
+                    dst = os.path.join(save_path, img)
+                    shutil.move(src, dst)
+                
+                messagebox.showinfo("Missing label files", f"Images without labels have been moved to {save_path}")
 
         output_path = self.general_data["output_path"].get().strip()
 
@@ -430,22 +463,14 @@ class GeneralConfigFrame(ttk.Frame):
                 if color == "":
                     tk.messagebox.showerror("General configuration error", f"Missing color for {class_id}. All classes must have a color.")
                     return False
-
-        
-        if self.general_data["background"].get().strip():
-            background_value = int(self.general_data["background"].get())
-
-            if len(self.general_data["class_mapping"]) != 0 and background_value not in list(self.general_data["class_mapping"].values()):
-                tk.messagebox.showerror("General configuration error", "Background class does not exist in the class mapping file.")
-                return False
         
         return True
 
     def toggle_load_button(self):
         if self.general_data["class_map_file"].get().strip() != "":
-            self.load_classmap_bt.grid()
+            self.clear_classmap_bt.grid()
         else:
-            self.load_classmap_bt.grid_remove()
+            self.clear_classmap_bt.grid_remove()
 
     def next(self):
         

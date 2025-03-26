@@ -2,9 +2,11 @@ import numpy as np
 import pandas as pd
 import os
 import shutil
+import json
+from tqdm import tqdm
 
 from skmultilearn.model_selection import IterativeStratification
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import KFold, train_test_split
 
 from PIL import Image
 
@@ -12,19 +14,25 @@ from sklearn.utils import shuffle
 
 import cv2
 
-class TrainDataset():
+class TrainingDataset():
 
-    def __init__(self, img_path, label_path, output_path):
+    def __init__(self, img_path, multilabel_label_path, output_path, label_format, original_label_path):
         self.img_path = img_path
-        self.label_path = label_path
+        self.label_path = multilabel_label_path
         self.output_path = output_path
+        self.label_format = label_format
+        self.original_label_path = original_label_path
 
         self.image_files = sorted([os.path.join(img_path, f) for f in os.listdir(img_path) if f.endswith('.jpg')])
-        self.mask_paths = []
+        
+        self.mask_paths_multilabel = sorted([os.path.join(multilabel_label_path, f) for f in os.listdir(multilabel_label_path) if f.endswith('.png')])
 
-    def calculate_class_distributions(self, mask_paths, num_classes: int, background: int | None = None):
-        class_distributions = []
-        for mask_path in mask_paths:
+
+    def calculate_pixel_distribution(self, mask_paths, background: int | None = None):
+        all_distributions = []
+        unique_classes = set()
+
+        for mask_path in tqdm(mask_paths, desc="Calculating pixel distribution for each class"):
             with Image.open(mask_path) as mask_image:
                 mask = np.array(mask_image)
                 unique, counts = np.unique(mask, return_counts=True)
@@ -35,125 +43,214 @@ class TrainDataset():
                         unique = np.delete(unique, mask_exclude_idx)
                         counts = np.delete(counts, mask_exclude_idx)
 
-                adjusted_indices = [
-                    class_id if background is None or class_id < background else class_id - 1
-                    for class_id in unique
-                ]
+                unique_classes.update(unique)
 
-                distribution = np.zeros(num_classes)
-                for adjusted_class_id, count in zip(adjusted_indices, counts):
-                    if adjusted_class_id < num_classes:  
-                        distribution[adjusted_class_id] = count
+                distribution = {class_id: count for class_id, count in zip(unique, counts)}
+                all_distributions.append(distribution)
+                
+        num_classes = len(unique_classes)
+        sorted_classes = sorted(unique_classes)
 
-                class_distributions.append(distribution / distribution.sum())
+        matrix_distributions = np.zeros((len(mask_paths), num_classes))
+
+        for i, distribution in enumerate(all_distributions):
+            for class_id, count in distribution.items():
+                class_index = sorted_classes.index(class_id)
+                matrix_distributions[i, class_index] = count
+
+        row_sums = matrix_distributions.sum(axis=1, keepdims=True)  
+        matrix_distributions = np.divide(matrix_distributions, row_sums, where=row_sums != 0)  
         
-        return np.array(class_distributions)
+        return {
+            "distributions": matrix_distributions,
+            "num_classes": num_classes
+        }
 
-    def calculate_object_number(self, masks, num_classes: int, background: int | None = None):
+    def calculate_object_number(self, masks, background: int | None = None):
         all_objects_per_class = []
+        unique_classes = set()
 
-        for mask_path in masks:
+        for mask_path in tqdm(masks, desc="Reading number of classes from images"):
             with Image.open(mask_path) as mask_image:
                 mask = np.array(mask_image)
-                
-                unique_classes = np.unique(mask)
-                
-                objects_per_class = np.zeros(num_classes)
+                unique = np.unique(mask)
 
-                for class_id in unique_classes:
-                    
+                if background is not None:
+                    unique = unique[unique != background]
+
+                unique_classes.update(unique)
+
+        sorted_classes = sorted(unique_classes)  
+        num_classes = len(sorted_classes)
+        class_mapping = {class_id: idx for idx, class_id in enumerate(sorted_classes)}
+
+        for mask_path in tqdm(masks, desc="Calculating number of objects for each class"):
+            with Image.open(mask_path) as mask_image:
+                mask = np.array(mask_image)
+
+                objects_per_class = np.zeros(num_classes) 
+
+                for class_id in np.unique(mask):
                     if background is not None and class_id == background:
                         continue
 
-                    adjusted_class_id = class_id if background is None or class_id < background else class_id - 1
+                    if class_id in class_mapping:
+                        class_mask = np.where(mask == class_id, 255, 0).astype(np.uint8)
+                        contours, _ = cv2.findContours(class_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+                        objects_per_class[class_mapping[class_id]] = len(contours)
 
-                    if adjusted_class_id >= num_classes:
-                        continue
-
-                    class_mask = np.where(mask == class_id, 255, 0).astype(np.uint8)
-
-                    contours, _ = cv2.findContours(class_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-
-                    objects_per_class[adjusted_class_id] = len(contours)
                 all_objects_per_class.append(objects_per_class)
 
-        return np.array(all_objects_per_class)
+        return {
+            "distributions": np.array(all_objects_per_class),
+            "num_classes": num_classes,
+            "class_mapping": class_mapping
+        }
     
-    def calculate_pixel_ratio(self, masks: str, num_classes: int, background: int = None) -> np.ndarray:
-        objects_per_class = self.calculate_object_number(masks, num_classes, background)
+    def calculate_pixel_ratio(self, masks, background: int | None = None):
+        object_info = self.calculate_object_number(masks, background)
+        objects_per_class = object_info["distributions"]  
+        num_classes = object_info["num_classes"]
+        class_mapping = object_info["class_mapping"]
 
         all_pixel_ratios = []
 
-        for i, mask_path in enumerate(masks):
+        for i, mask_path in tqdm(enumerate(masks), total=len(masks), desc="Calculating pixel-to-object ratio for each class"):
             with Image.open(mask_path) as mask_image:
                 mask = np.array(mask_image)
 
                 pixels_per_class = np.zeros(num_classes)
 
-                unique_classes = np.unique(mask)
-
-                for class_id in unique_classes:
+                for class_id, class_index in class_mapping.items():
                     if background is not None and class_id == background:
-                        continue
+                        continue  
 
-                    adjusted_class_id = class_id if background is None or class_id < background else class_id - 1
-
-                    if adjusted_class_id >= num_classes:
-                        continue
-
-                    pixels_per_class[adjusted_class_id] = np.sum(mask == class_id)
+                    pixels_per_class[class_index] = np.sum(mask == class_id)
 
                 pixel_ratios = np.zeros(num_classes)
-                for class_id in range(num_classes):
-                    if objects_per_class[i, class_id] > 0:
-                        pixel_ratios[class_id] = pixels_per_class[class_id] / objects_per_class[i, class_id]
+                for class_id, class_index in class_mapping.items():
+                    if background is not None and class_id == background:
+                        continue  
+
+                    if objects_per_class[i, class_index] > 0:
+                        pixel_ratios[class_index] = pixels_per_class[class_index] / objects_per_class[i, class_index]
 
                 all_pixel_ratios.append(pixel_ratios)
 
-        return np.array(all_pixel_ratios)
+        return {
+            "distributions": np.array(all_pixel_ratios),
+            "num_classes": num_classes,
+        }
     
-    def save_split_to_directory(self, train_df, val_df, test_df):
+    def save_mask_format(self, row, img_dir, label_dir):
+        shutil.copy(row["img_path"], os.path.join(img_dir, os.path.basename(row["img_path"])))
+        shutil.copy(row["mask_path"], os.path.join(label_dir, os.path.basename(row["mask_path"])))
+    
+    def save_txt_format(self, row, img_dir, label_dir):
+        shutil.copy(row["img_path"], os.path.join(img_dir, os.path.basename(row["img_path"])))
+        txt_label_path = row["mask_path"].replace(".png", ".txt").replace(".jpg", ".txt")
+        txt_label_path = os.path.join(self.original_label_path, os.path.basename(txt_label_path))
+        if os.path.exists(txt_label_path):
+            shutil.copy(txt_label_path, os.path.join(label_dir, os.path.basename(txt_label_path)))
+
+    def save_json_format(self, row, img_dir, label_dir, coco_data, selected_images, selected_annotations, image_ids):
+        img_name = os.path.basename(row["img_path"])
+        for img in coco_data["images"]:
+            if img["file_name"] == img_name:
+                selected_images.append(img)
+                current_img_id = img["id"]
+                image_ids.add(current_img_id)
+                break
+        for ann in coco_data["annotations"]:
+            if ann["image_id"] == current_img_id:
+                selected_annotations.append(ann)
+        shutil.copy(row["img_path"], os.path.join(img_dir, os.path.basename(row["img_path"])))        
+
+    def save_split_to_directory(self, train_df, val_df, test_df, fold_dir: str = None):
+
+        print("Saving splits...")
+
         subsets = {"train": train_df, "val": val_df, "test": test_df}
+
+        format_handlers = {
+            "mask": self.save_mask_format,
+            "txt": self.save_txt_format,
+            "json": None  
+        }
+
+        output_path = self.output_path
+
+        if fold_dir:
+            output_path = fold_dir
 
         for subset, df in subsets.items():
             if df is None:
                 continue
-            img_dir = os.path.join(self.output_path, subset, "images")
-            label_dir = os.path.join(self.output_path, subset, "labels")
+            
+            img_dir = os.path.join(output_path, subset, "images")
+            label_dir = os.path.join(output_path, subset, "labels")
             os.makedirs(img_dir, exist_ok=True)
             os.makedirs(label_dir, exist_ok=True)
 
-            for _, row in df.iterrows():
-                shutil.copy(row["img_path"], os.path.join(img_dir, os.path.basename(row["img_path"])))
-                shutil.copy(row["mask_path"], os.path.join(label_dir, os.path.basename(row["mask_path"])))
+            if self.label_format in format_handlers:
+                handler = format_handlers[self.label_format]
+                if handler:
+                    tqdm.pandas(desc=f"Saving {subset} images and labels")
+                    df.progress_apply(lambda row: handler(row, img_dir, label_dir), axis=1)
+                    continue  
+                    
+            with open(self.original_label_path, "r") as f:
+                coco_data = json.load(f)
 
-    def split(self, num_classes: int, train_fraction: float, val_fraction: float, test_fraction: float, stratify: True,
-        stratification_strategy: str = "pixel_distribution",  background: int | None = None, random_state: int=123
+            selected_images = []
+            selected_annotations = []
+            image_ids = set()
+            
+            tqdm.pandas(desc=f"Saving {subset} JSON annotations")
+            df.progress_apply(lambda row: self.save_json_format(row, img_dir, label_dir, coco_data, selected_images, selected_annotations, image_ids), axis=1)
+        
+            coco_subset = {
+                "images": selected_images,
+                "annotations": selected_annotations,
+                "categories": coco_data["categories"]
+            }
+            with open(os.path.join(label_dir, f"{subset}.json"), "w") as f:
+                json.dump(coco_subset, f, separators=(',', ':'))
+
+        print(f"Splits successfully saved in {output_path}")
+        
+    def split(self, hold_out: bool, train_fraction: float = 0.7, val_fraction: float = 0.2, test_fraction: float = 0.1, n_folds: int=5, 
+              stratify: bool=True, stratification_strategy: str = "pixels",  background: int | None = None, random_state: int=123
     ):
         
-        if stratify and stratification_strategy.lower() not in ["pixel_distribution", "num_objects", "pixel_objects_ratio"]:
-            raise ValueError("Invalid value for stratification_strategy. Must be 'pixel_distribution', 'num_objects' or 'pixel_objects_ratio'.")
+        if stratify and stratification_strategy.lower() not in ["pixels", "objects", "pixel_to_object_ratio"]:
+            raise ValueError("Invalid value for stratification_strategy. Must be 'pixels', 'objects' or 'pixel_to_object_ratio'.")
         
-        if not np.isclose(train_fraction + val_fraction + test_fraction, 1.0):
-            raise ValueError("The sum of train_fraction, val_fraction, and test_fraction must equal 1.0")
+        if hold_out:
+            if not np.isclose(train_fraction + val_fraction + test_fraction, 1.0):
+                raise ValueError("The sum of train_fraction, val_fraction, and test_fraction must equal 1.0")
 
-        if len(self.image_paths) != len(self.mask_paths):
+        if self.mask_paths_multilabel != None and len(self.image_files) != len(self.mask_paths_multilabel):
             raise ValueError("The number of images and masks must be the same.")
         
-        if stratify:
-            train_images, train_masks, val_images, val_masks, test_images, test_masks = self.stratify_split(self.image_paths, self.mask_paths, num_classes, train_fraction, val_fraction, test_fraction, stratification_strategy, background, random_state)
-        else:
-            train_images, train_masks, val_images, val_masks, test_images, test_masks = self.random_split(self.image_paths, self.mask_paths, train_fraction, val_fraction, test_fraction, random_state)
+        if hold_out: 
+            if stratify:
+                train_images, train_masks, val_images, val_masks, test_images, test_masks = self.stratify_split(train_fraction, val_fraction, test_fraction, stratification_strategy, background, random_state)
+            else:
+                train_images, train_masks, val_images, val_masks, test_images, test_masks = self.random_split(train_fraction, val_fraction, test_fraction, random_state)
+        
+            train_df = pd.DataFrame({"img_path": train_images, "mask_path": train_masks})
+            val_df = pd.DataFrame({"img_path": val_images, "mask_path": val_masks})
+            test_df = pd.DataFrame({"img_path": test_images, "mask_path": test_masks})
+
+            self.save_split_to_directory(train_df, val_df, test_df)
+
+            return
+        
+        self.kfold_cross_validation(n_folds, stratify, stratification_strategy, background, random_state)
 
         
-        train_df = pd.DataFrame({"img_path": train_images, "mask_path": train_masks})
-        val_df = pd.DataFrame({"img_path": val_images, "mask_path": val_masks})
-        test_df = pd.DataFrame({"img_path": test_images, "mask_path": test_masks})
-
-        self.save_split_to_directory(train_df, val_df, test_df)
-
-        
-    def stratify_split(self, image_paths, mask_paths, num_classes, train_fraction, val_fraction, test_fraction, stratification_strategy, background, random_state):
+    def stratify_split(self, train_fraction, val_fraction, test_fraction, stratification_strategy, background, random_state):
         """
         Stratify-shuffle-split a semantic segmentation dataset into
         train/val/test sets based on pixel-wise class distributions and save
@@ -171,18 +268,21 @@ class TrainDataset():
             Tuple containing three DataFrames: train, val, and test subsets.
             Each DataFrame has two columns: 'img_path' and 'mask_path'.
         """
-        image_paths, mask_paths = shuffle(image_paths, mask_paths, random_state=random_state)
+        image_paths, mask_paths = shuffle(self.image_files, self.mask_paths_multilabel, random_state=random_state)
 
-        distributions = []
-
-        if stratification_strategy.lower() == "pixel_distribution":
-            distributions = self.calculate_class_distributions(mask_paths, num_classes, background)
-        elif stratification_strategy.lower() == "num_objects":
-            distributions = self.calculate_object_number(mask_paths, num_classes, background)
+        print("Starting classes stratification...")
+        if stratification_strategy.lower() == "pixels":
+            result = self.calculate_pixel_distribution(mask_paths, background)
+        elif stratification_strategy.lower() == "objects":
+            result = self.calculate_object_number(mask_paths, background)
         else:
-            distributions = self.calculate_pixel_ratio(mask_paths, num_classes, background)
+            result = self.calculate_pixel_ratio(mask_paths, background)
+        
+        distributions = result["distributions"]
+        num_classes = result["num_classes"]
 
-        # Split the data into train and "everything else" using IterativeStratification
+        print(f"Stratification done. {num_classes} classes detected.")
+        
         stratifier = IterativeStratification(
             n_splits=2,
             order=1,
@@ -191,14 +291,12 @@ class TrainDataset():
 
         everything_else_indexes, train_indexes = next(stratifier.split(X=np.zeros(len(image_paths)), y=distributions))
 
-        # Separate the image and mask paths into train and everything_else sets
         train_images = [image_paths[i] for i in train_indexes]
         train_masks = [mask_paths[i] for i in train_indexes]
 
         everything_else_images = [image_paths[i] for i in everything_else_indexes]
         everything_else_masks = [mask_paths[i] for i in everything_else_indexes]
 
-        # Step 2: Split the "everything else" set into validation and test
         val_proportion = val_fraction / (val_fraction + test_fraction)  
 
         stratifier = IterativeStratification(
@@ -209,7 +307,6 @@ class TrainDataset():
 
         test_indexes, val_indexes  = next(stratifier.split(X=np.zeros(len(everything_else_images)), y=distributions[everything_else_indexes]))
 
-        # Separate the image and mask paths into val and test sets
         val_images = [everything_else_images[i] for i in val_indexes]
         val_masks = [everything_else_masks[i] for i in val_indexes]
         test_images = [everything_else_images[i] for i in test_indexes]
@@ -217,10 +314,10 @@ class TrainDataset():
 
         return train_images, train_masks, val_images, val_masks, test_images, test_masks
     
-    def random_split(self, image_paths, mask_paths, train_fraction, val_fraction, test_fraction, random_state):
+    def random_split(self, train_fraction, val_fraction, test_fraction, random_state):
         
         train_val_images, test_images, train_val_masks, test_masks = train_test_split(
-            image_paths, mask_paths, test_size=test_fraction, random_state=random_state
+            self.image_files, self.mask_paths_multilabel, test_size=test_fraction, random_state=random_state
         )
 
         val_fraction_adjusted = val_fraction / (train_fraction + val_fraction)  
@@ -231,96 +328,104 @@ class TrainDataset():
         return train_images, train_masks, val_images, val_masks, test_images, test_masks
     
     
-    def automate_split_nested(
+    def kfold_cross_validation(
         self,
-        image_paths: str,
-        mask_paths: str,
-        num_classes: int,
-        test_fraction: float,
         n_splits: int,
-        fold_val_fraction: float,
-        output_dir: str | None = None,
+        stratify: bool = False, 
+        stratification_strategy: str = "pixels",
+        background: int = None,
         random_state: int = 42
         ):
         """
-        Automatiza el proceso de partición en un conjunto de test fijo + K-Fold en train/val.
+        Automates the partitioning process into a fixed test set + K-Fold for train/val.
 
         Args:
-            image_paths: Lista de rutas de las imágenes.
-            mask_paths: Lista de rutas de las máscaras.
-            num_classes: Número de clases en el dataset (para estratificación).
-            output_dir: Directorio donde se guardarán las particiones. Si None, no se guardan.
-            test_fraction: Fracción del dataset para el conjunto de test.
-            n_splits: Número de folds para K-Fold split en train/val.
-            stratified: Si True, usa estratificación para los splits.
-            random_state: Semilla para la aleatorización.
+            output_dir: Directory where the partitions will be saved. If None, they are not saved.
+            test_fraction: Fraction of the dataset allocated to the test set.
+            n_splits: Number of folds for K-Fold split in train/val.
+            random_state: Seed for randomization.
 
         Returns:
-            - test_df: DataFrame del conjunto de test.
-            - folds: Lista de tuplas [(train_df, val_df)] para cada fold.
+            - test_df: DataFrame containing the test set.
+            - folds: List of tuples [(train_df, val_df)] for each fold.
         """
-        if len(image_paths) != len(mask_paths):
+        if len(self.image_files) != len(self.mask_paths_multilabel):
             raise ValueError("The number of images and masks must be the same.")
 
-        image_paths, mask_paths = shuffle(image_paths, mask_paths, random_state=random_state)
+        image_paths, mask_paths = shuffle(self.image_files, self.mask_paths_multilabel, random_state=random_state)
 
-        class_distributions = self.calculate_class_distributions(mask_paths, num_classes)
-
-        # Split the data into train and "everything else" using IterativeStratification
-        stratifier = IterativeStratification(
-            n_splits=2,
-            order=1,
-            sample_distribution_per_fold=[test_fraction, 1.0 - test_fraction]
-        )
-
-        everything_else_indexes, test_indexes = next(stratifier.split(X=np.zeros(len(image_paths)), y=class_distributions))
-
-        test_images = [image_paths[i] for i in test_indexes]
-        test_masks = [mask_paths[i] for i in test_indexes]
-
-        train_val_images = [image_paths[i] for i in everything_else_indexes]
-        train_val_masks = [mask_paths[i] for i in everything_else_indexes]
-
-        test_df = pd.DataFrame({"img_path": test_images, "mask_path": test_masks})
-        print(np.full(n_splits, fold_val_fraction))
-        # K-Fold en el resto (train + val)
+        used_val_indices = set()
         folds = []
+
+        if not stratify:
+            print("Saving splits...")
+
+            kfold = KFold(n_splits=n_splits, shuffle=True, random_state=random_state)
+
+            for fold_idx, (train_idx, val_idx) in tqdm(enumerate(kfold.split(X=np.zeros(len(image_paths)), y=np.zeros(len(image_paths)))), 
+                                                       total=n_splits, 
+                                                       desc="Processing folds"):
+
+                if any(idx in used_val_indices for idx in val_idx):
+                    raise ValueError(f"Duplicate indices found in fold {fold_idx + 1} for the validation set.")
+                
+                used_val_indices.update(val_idx)
+                
+                train_images = [image_paths[i] for i in train_idx]
+                train_masks = [mask_paths[i] for i in train_idx]
+                val_images = [image_paths[i] for i in val_idx]
+                val_masks = [mask_paths[i] for i in val_idx]
+
+                train_df = pd.DataFrame({"img_path": train_images, "mask_path": train_masks})
+                val_df = pd.DataFrame({"img_path": val_images, "mask_path": val_masks})
+                folds.append((train_df, val_df))
+
+                fold_dir = os.path.join(self.output_path, f"fold_{fold_idx + 1}")
+                self.save_split_to_directory(train_df, val_df, None, fold_dir)
+                
+            return
+
+        print("Starting stratification...")
+
+        if stratification_strategy.lower() == "pixels":
+            result = self.calculate_pixel_distribution(mask_paths, background)
+        elif stratification_strategy.lower() == "objects":
+            result = self.calculate_object_number(mask_paths, background)
+        else:
+            result = self.calculate_pixel_ratio(mask_paths, background)
+
+        distributions = result["distributions"]
+        num_classes = result["num_classes"]
+
+        print(f"Stratification done. {num_classes} classes detected.")
+
+
         stratifier = IterativeStratification(
             n_splits=n_splits,
             order=1,
-            sample_distribution_per_fold=[fold_val_fraction] * n_splits
+            sample_distribution_per_fold=[1.0 / n_splits] * n_splits
         )
 
-        used_val_indices = set()
-
-        # Realizamos el KFold con la distribución de clases para el resto de los datos
-        for fold_idx, (train_idx, val_idx) in enumerate(stratifier.split(X=np.zeros(len(train_val_images)), y=class_distributions[everything_else_indexes])):
+        for fold_idx, (train_idx, val_idx) in tqdm(enumerate(stratifier.split(X=np.zeros(len(image_paths)), 
+                                                                      y=distributions)), 
+                                           total=n_splits, 
+                                           desc="Processing folds"):
 
             if any(idx in used_val_indices for idx in val_idx):
-                raise ValueError(f"Índices duplicados encontrados en el fold {fold_idx + 1} para el conjunto de validación.")
+                raise ValueError(f"Duplicate indices found in fold {fold_idx + 1} for the validation set.")
             
             used_val_indices.update(val_idx)
-
-            print(f"Fold {fold_idx + 1}:")
-            print(f"  Training indices: {train_idx}...")  # Muestra los primeros 5 índices de entrenamiento
-            print(f"  Validation indices: {val_idx}...\n")  # Muestra los primeros 5 índices de validación
             
-            train_images = [train_val_images[i] for i in train_idx]
-            train_masks = [train_val_masks[i] for i in train_idx]
-            val_images = [train_val_images[i] for i in val_idx]
-            val_masks = [train_val_masks[i] for i in val_idx]
+            train_images = [image_paths[i] for i in train_idx]
+            train_masks = [mask_paths[i] for i in train_idx]
+            val_images = [image_paths[i] for i in val_idx]
+            val_masks = [mask_paths[i] for i in val_idx]
 
             train_df = pd.DataFrame({"img_path": train_images, "mask_path": train_masks})
             val_df = pd.DataFrame({"img_path": val_images, "mask_path": val_masks})
             folds.append((train_df, val_df))
 
-            if output_dir:
-                fold_dir = os.path.join(output_dir, f"fold_{fold_idx + 1}")
-                self.save_split_to_directory(train_df, val_df, None, fold_dir)
+            fold_dir = os.path.join(self.output_path, f"fold_{fold_idx + 1}")
+            self.save_split_to_directory(train_df, val_df, None, fold_dir)
 
-        if output_dir:
-            test_dir = os.path.join(output_dir, "test")
-            os.makedirs(test_dir, exist_ok=True)
-            self.save_split_to_directory(None, None, test_df, output_dir)
-
-        return test_df, folds
+        return

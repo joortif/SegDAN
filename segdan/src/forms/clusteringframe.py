@@ -79,4 +79,4 @@ class ClusteringFrame(ttk.Frame):
             self.controller.show_frame("ClusteringConfigFrame")
             return
         
-        self.controller.show_frame("TrainingConfigFrame")
+        self.controller.show_frame("DatasetSplitFrame")

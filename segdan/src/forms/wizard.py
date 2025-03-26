@@ -1,8 +1,9 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
 
+from src.forms.modelframe import ModelConfigFrame
 from src.forms.configfileloaderframe import ConfigFileLoaderFrame
-from src.forms.trainingconfigframe import TrainingConfigFrame
+from src.forms.datasetsplitframe import DatasetSplitFrame
 from src.forms.reductionframe import ReductionFrame
 from src.forms.clusteringconfigframe import ClusteringConfigFrame
 from src.forms.analysisconfigframe import AnalysisConfigFrame
@@ -16,7 +17,7 @@ class Wizard(tk.Tk):
       tk.Tk.__init__(self, *args, **kwargs)
 
       self.title("SegDAN Wizard")
-      self.window_width = 800
+      self.window_width = 850
       self.window_height = 750
 
       screen_width = self.winfo_screenwidth()
@@ -47,7 +48,8 @@ class Wizard(tk.Tk):
          "Analysis", 
          "Clustering", "Clustering configuration", 
          "Reduction", "Reduction configuration", 
-         "Training",
+         "Dataset split",
+         "Model configuration",
          "ConfigFileLoader"
       ]
 
@@ -56,14 +58,14 @@ class Wizard(tk.Tk):
 
       self.create_breadcrumb()
 
-      steps_classes = [IntroductionFrame, GeneralConfigFrame, AnalysisConfigFrame, ClusteringFrame, ClusteringConfigFrame, ReductionFrame, ReductionConfigFrame, TrainingConfigFrame, ConfigFileLoaderFrame]
+      steps_classes = [IntroductionFrame, GeneralConfigFrame, AnalysisConfigFrame, ClusteringFrame, ClusteringConfigFrame, ReductionFrame, ReductionConfigFrame, DatasetSplitFrame, ModelConfigFrame, ConfigFileLoaderFrame]
 
       for Step in steps_classes:
          frame = Step(self.container, self, self.config_data, self.final_dict)
          self.frames[Step.__name__] = frame
          frame.grid(row=0, column=0, sticky="nsew")
 
-      self.show_frame("IntroductionFrame")
+      self.show_frame("ModelConfigFrame")
 
       self.protocol("WM_DELETE_WINDOW", self.on_close)
 

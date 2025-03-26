@@ -89,4 +89,4 @@ class ReductionFrame(ttk.Frame):
             self.controller.show_frame("ReductionConfigFrame")
             return
     
-        self.controller.show_frame("TrainingConfigFrame")
+        self.controller.show_frame("DatasetSplitFrame")

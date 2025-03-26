@@ -43,31 +43,34 @@ def _find_best_model(clustering_model_configurations, evaluation_metric, logger,
         best_model = max(clustering_model_configurations.items(), key=lambda item: item[1][-2])
 
     model_name = best_model[0]
-    model_score = best_model[1][-2]  
+    model_values = best_model[1]
+    model_score = model_values[-2]  
+    best_model_labels = model_values[-1]
+
+    param_names_dict = {
+        "kmeans": ["n_clusters", "random_state"],
+        "agglomerative": ["n_clusters", "linkage"],
+        "dbscan": ["eps", "min_samples"],
+        "optics": ["min_samples"]
+    }
+
+    param_names = param_names_dict.get(model_name, [])
+    param_values = model_values[:len(param_names)]
+    model_params = dict(zip(param_names, param_values))
+
     best_model_config = {
         'model_name': model_name,
-        'score': model_score
+        'score': model_score,
+        **model_params
     }
-    best_model_labels = best_model[1][-1]
-
-    model_params = clustering_model_configurations.get(model_name, {})
-
+    
     if verbose:
         logger.info(f"Best model: {model_name}")
         logger.info(f"Score ({evaluation_metric}): {model_score}")
         logger.info("Best parameters:")
 
         for param, value in model_params.items():
-            best_value = best_model[1][list(model_params.keys()).index(param)]
-
-            if '_range' in param:
-                param = param.replace('_range', '')
-
-            if param == 'random_state':
-                best_value = value
-
-            logger.info(f"  {param}: {best_value}")
-            best_model_config[param] = best_value
+            logger.info(f"  {param}: {value}")
 
     return best_model_config, best_model_labels
 
@@ -80,15 +83,15 @@ def reduce_dataset(config, clustering_results, evaluation_metric, dataset, label
     reduction_model_name = config['reduction_model']
 
     if reduction_model_name == "best_model":
-        reduction_model, labels = _find_best_model(clustering_results, evaluation_metric, logger, verbose)
-        reduction_model_name = reduction_model["model_name"]
+        reduction_model_info, labels = _find_best_model(clustering_results, evaluation_metric, logger, verbose)
+        reduction_model_name = reduction_model_info["model_name"]
     else:
         reduction_model_info = clustering_results[reduction_model_name]
         labels = reduction_model_info[-1]
 
     print(f"Using {reduction_model_name} model for dataset reduction.")
 
-    random_state = reduction_model_info[-1][1] if reduction_model_name == 'kmeans' else 123
+    random_state = reduction_model_info["random_state"] if reduction_model_name == 'kmeans' else 123
 
     clustering_factory = ClusteringFactory()
     model = clustering_factory.generate_clustering_model(reduction_model_name, dataset, embeddings, random_state)
@@ -106,7 +109,7 @@ def reduce_dataset(config, clustering_results, evaluation_metric, dataset, label
 
     if reduction_model_name == "kmeans":
         select_params.pop("existing_labels")
-        select_params["n_clusters"] = reduction_model_info[-1][0]
+        select_params["n_clusters"] = reduction_model_info["n_clusters"]
     elif reduction_model_name in ["dbscan", "optics"]:
         select_params["include_outliers"] = include_outliers
 
