@@ -48,7 +48,7 @@
         "reduction_model": "",
         "use_reduced": false
     },
-    "training_data": {
+    "split_data": {
         "split_method": true,
         "hold_out": {
             "train": 0.7,

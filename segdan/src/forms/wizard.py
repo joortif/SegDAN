@@ -31,6 +31,7 @@ class Wizard(tk.Tk):
       self.resizable(False, False)
 
       self.config_data = {
+         "analyze": tk.BooleanVar(value=False),
          "cluster_images": tk.BooleanVar(value=False),
          "reduce_images": tk.BooleanVar(value=False),
          
@@ -65,7 +66,7 @@ class Wizard(tk.Tk):
          self.frames[Step.__name__] = frame
          frame.grid(row=0, column=0, sticky="nsew")
 
-      self.show_frame("ModelConfigFrame")
+      self.show_frame("IntroductionFrame")
 
       self.protocol("WM_DELETE_WINDOW", self.on_close)
 

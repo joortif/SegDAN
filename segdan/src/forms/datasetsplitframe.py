@@ -19,8 +19,8 @@ class DatasetSplitFrame(ttk.Frame):
 
         self.models_list = ConfigHandler.CONFIGURATION_VALUES["semantic_segmentation_models"]
 
-        if "training_data" not in self.config_data:
-            self.config_data["training_data"] = {
+        if "split_data" not in self.config_data:
+            self.config_data["split_data"] = {
                 "split_method": self.config_data.get("split_method", tk.BooleanVar(value=True)), 
                 "hold_out": {
                     "train": self.config_data.get("train", tk.StringVar(value="0.7")),
@@ -35,8 +35,8 @@ class DatasetSplitFrame(ttk.Frame):
                 "stratification_random_seed": self.config_data.get("stratification_random_seed", tk.StringVar(value="123")),
                 }
             
-        self.training_data = self.config_data["training_data"]
-        self.split_method = self.training_data["split_method"]
+        self.split_data = self.config_data["split_data"]
+        self.split_method = self.split_data["split_method"]
 
         self.row=0
 
@@ -57,7 +57,6 @@ class DatasetSplitFrame(ttk.Frame):
         self.training_frame.grid_rowconfigure(0, weight=0)
         self.training_frame.grid_columnconfigure(0, weight=0)
         self.training_frame.grid_columnconfigure(1, weight=0)
-
 
         button_back = ttk.Button(button_frame, text="Back", command=self.back)
         button_back.grid(row=0, column=0, padx=50, pady=10, sticky="w")
@@ -82,29 +81,29 @@ class DatasetSplitFrame(ttk.Frame):
         ToolTip(self.hold_out_radiobt_no, msg="Repeatedly splits the dataset into training and validation sets to improve reliability; may significantly increase training time.")
 
         self.train_percentage_label = tk.Label(self.dataset_config_labelframe, text="Train percentage *")
-        self.train_percentage_entry = tk.Entry(self.dataset_config_labelframe, textvariable=self.training_data['hold_out']['train'], width=10, validate="key", validatecommand=val_float)
+        self.train_percentage_entry = tk.Entry(self.dataset_config_labelframe, textvariable=self.split_data['hold_out']['train'], width=10, validate="key", validatecommand=val_float)
         self.valid_percentage_label = tk.Label(self.dataset_config_labelframe, text="Validation percentage *")
-        self.valid_percentage_entry = tk.Entry(self.dataset_config_labelframe, textvariable=self.training_data['hold_out']['valid'], width=10, validate="key", validatecommand=val_float)
+        self.valid_percentage_entry = tk.Entry(self.dataset_config_labelframe, textvariable=self.split_data['hold_out']['valid'], width=10, validate="key", validatecommand=val_float)
         self.test_percentage_label = tk.Label(self.dataset_config_labelframe, text="Test percentage *")
-        self.test_percentage_entry = tk.Entry(self.dataset_config_labelframe, textvariable=self.training_data['hold_out']['test'], width=10, validate="key", validatecommand=val_float)
+        self.test_percentage_entry = tk.Entry(self.dataset_config_labelframe, textvariable=self.split_data['hold_out']['test'], width=10, validate="key", validatecommand=val_float)
         ToolTip(self.train_percentage_label, msg="Percentage of data allocated for training.")
         ToolTip(self.valid_percentage_label, msg="Percentage of data used for model validation.")
         ToolTip(self.test_percentage_label, msg="Percentage of data reserved for testing the model's performance.")
 
         self.stratification_label = tk.Label(self.dataset_config_labelframe, text="Stratification")
-        self.stratification_checkbt = ttk.Checkbutton(self.dataset_config_labelframe, variable=self.training_data["stratification"], command=self.on_stratification_select)   
+        self.stratification_checkbt = ttk.Checkbutton(self.dataset_config_labelframe, variable=self.split_data["stratification"], command=self.on_stratification_select)   
         ToolTip(self.stratification_label, msg="Whether to maintain class distribution when splitting the dataset.")
 
         self.stratification_type_label = tk.Label(self.dataset_config_labelframe, text="Stratification type *")
-        self.stratification_type_combobox = ttk.Combobox(self.dataset_config_labelframe, textvariable=self.training_data["stratification_type"], values=stratification_types, state="readonly")
+        self.stratification_type_combobox = ttk.Combobox(self.dataset_config_labelframe, textvariable=self.split_data["stratification_type"], values=stratification_types, state="readonly")
         ToolTip(self.stratification_type_label, msg="Method used for stratifying the dataset (e.g., by pixel distribution, number of objects from each class...)")
 
         self.stratification_random_seed_label = tk.Label(self.dataset_config_labelframe, text="Random seed")
-        self.stratification_random_seed_entry = ttk.Entry(self.dataset_config_labelframe, textvariable=self.training_data["stratification_random_seed"], validate="key", width=10, validatecommand=val_int)
+        self.stratification_random_seed_entry = ttk.Entry(self.dataset_config_labelframe, textvariable=self.split_data["stratification_random_seed"], validate="key", width=10, validatecommand=val_int)
         ToolTip(self.stratification_random_seed_label, msg="Specify the random seed for stratification. A random seed ensures reproducibility by initializing the random number generator to the same state.")
 
         self.num_folds_label = tk.Label(self.dataset_config_labelframe, text="Number of folds *")
-        self.num_folds_entry = ttk.Entry(self.dataset_config_labelframe, textvariable=self.training_data["cross_val"]["num_folds"], width=10, validate="key", validatecommand=val_int)
+        self.num_folds_entry = ttk.Entry(self.dataset_config_labelframe, textvariable=self.split_data["cross_val"]["num_folds"], width=10, validate="key", validatecommand=val_int)
         ToolTip(self.num_folds_label, msg="Number of groups into which the dataset is split for cross-validation.")
 
         self.dataset_config_labelframe.grid(row=0, column=0, padx=5, pady=10, columnspan=4, sticky="ew")
@@ -136,7 +135,7 @@ class DatasetSplitFrame(ttk.Frame):
 
     def on_stratification_select(self):
 
-        if self.training_data["stratification"].get():
+        if self.split_data["stratification"].get():
 
             self.stratification_type_label.grid(row=3, column=1, padx=10, pady=10)
             self.stratification_type_combobox.grid(row=4, column=1, padx=10, pady=10)
@@ -187,7 +186,7 @@ class DatasetSplitFrame(ttk.Frame):
     def validate_form(self):
 
         if self.split_method.get(): 
-            hold_out = self.config_data["training_data"].get("hold_out")
+            hold_out = self.config_data["split_data"].get("hold_out")
             
             train_percentage = hold_out.get("train")
             val_percentage = hold_out.get("valid")
@@ -233,7 +232,7 @@ class DatasetSplitFrame(ttk.Frame):
                 tk.messagebox.showerror("Dataset split error", "The sum of train, validation, and test percentages must equal 1.")
                 return False
         else:
-            num_folds = self.config_data["training_data"].get("cross_val").get("num_folds").get()
+            num_folds = self.config_data["split_data"].get("cross_val").get("num_folds").get()
 
             if num_folds.strip() == "":
                 tk.messagebox.showerror("Dataset split error", "The number of folds for cross validation can't be empty.")
@@ -245,19 +244,19 @@ class DatasetSplitFrame(ttk.Frame):
                 tk.messagebox.showerror("Dataset split error", "The number of folds for cross validation can't be 0.")
                 return False
             
-        if self.training_data["stratification"].get():
+        if self.split_data["stratification"].get():
 
-            random_seed = self.training_data["stratification_random_seed"].get().strip()
+            random_seed = self.split_data["stratification_random_seed"].get().strip()
 
             if not random_seed:
-                self.training_data["stratification_random_seed"].set("123")
+                self.split_data["stratification_random_seed"].set("123")
         
         return True
     
     def update_config(self, event, listbox, options, param_key):
         selected_indices = listbox.curselection()  
         selected_values = [options[i] for i in selected_indices]  
-        self.training_data[param_key] = selected_values
+        self.split_data[param_key] = selected_values
 
     def back(self):
 
@@ -274,7 +273,7 @@ class DatasetSplitFrame(ttk.Frame):
         if not self.validate_form():
             return
         
-        self.config_data["training_data"].update(self.training_data)
+        self.config_data["split_data"].update(self.split_data)
         self.controller.show_frame("ModelConfigFrame")
 
 

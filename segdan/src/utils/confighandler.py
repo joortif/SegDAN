@@ -45,7 +45,7 @@ class ConfigHandler():
         "reduction_type": ["representative", "diverse", "random"],
         "reduction_models": ["best_model", "kmeans", "agglomerative", "dbscan", "optics"],
 
-        "segmentation": ["semantic", "instance"],
+        "segmentation": ["Semantic", "Instance"],
         "semantic_segmentation_models": ["U-Net", "DeepLabV3", "Segformer", "FPN", "PSPNet"],
         "instance_segmentation_models": ["YOLO", "Mask R-CNN"],
         "semantic_metrics": ["Accuracy", "Precision", "Recall", "IoU (Intersection over Union)", "Dice score"],

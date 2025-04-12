@@ -29,6 +29,7 @@ class FormUtils():
                 return value.get()
             if isinstance(value, tk.StringVar):
                 val = value.get()
+                print(val)
                 try:
                     return int(val)
                 except ValueError:
@@ -36,7 +37,7 @@ class FormUtils():
                 try:
                     return float(val)
                 except ValueError:
-                    return val
+                    return val.lower()
             else:
                 return value
 

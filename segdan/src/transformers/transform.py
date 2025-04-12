@@ -18,6 +18,6 @@ def transform_labels(labels_dir, imgs_dir, input, data, output_path, background,
         transformer.transform(input_data=labels_dir, output_dir=transformations_path, color_dict=data["color_dict"])
 
     elif input == "binary":
-        transformer.transform(input_data=labels_dir, output_dir=transformations_path, threshold=data["threshold"])
+        transformer.transform(input_data=labels_dir, img_dir = imgs_dir, output_dir=transformations_path, threshold=data["threshold"])
 
     return transformations_path

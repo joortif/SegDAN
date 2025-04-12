@@ -35,6 +35,7 @@ def cluster_images(clustering_data: dict, dataset: ImageDataset, embeddings, out
     for (model_name, args) in clustering_models.items():
         random_state = args.get("random_state", 123)
         clust_model = clustering_factory.generate_clustering_model(model_name, dataset, embeddings, random_state)
+        output_dir = None
         if plot:
             output_dir = os.path.join(output_path, "clustering", model_name)
             os.makedirs(output_dir, exist_ok=True)
