@@ -1,7 +1,6 @@
 from src.transformers.transformerfactory import TransformerFactory
 from src.transformers.transform import transform_labels
 from src.utils.imagelabelutils import ImageLabelUtils
-from src.utils.confighandler import ConfigHandler
 from src.extensions.extensions import LabelExtensions
 
 from imagedatasetanalyzer import ImageLabelDataset, ImageDataset

@@ -2,14 +2,18 @@ import pytorch_lightning as pl
 import segmentation_models_pytorch as smp
 import torch
 from torch.optim import lr_scheduler
+import time
+import pandas as pd
 
-
-class PytorchSegmentationModel(pl.LightningModule):
-    def __init__(self, in_channels, out_classes, metrics, t_max, ignore_index=None, model_name="unet", encoder_name="resnet34", **kwargs):
+class SMPModel(pl.LightningModule):
+    def __init__(self, in_channels:int , out_classes: int, metrics, t_max, ignore_index=255, model_name="unet", encoder_name="resnet34", **kwargs):
         super().__init__()
+        self.model_name = model_name.replace("-", "")
+        self.encoder_name = encoder_name
+
         self.model = smp.create_model(
-            model_name,
-            encoder_name=encoder_name,
+            self.model_name,
+            encoder_name=self.encoder_name,
             in_channels=in_channels,
             classes=out_classes,
             **kwargs,
@@ -86,6 +90,7 @@ class PytorchSegmentationModel(pl.LightningModule):
             metric_args = {"mode": "binary"}
         else:
             metric_args = {"mode": "multiclass", "num_classes": self.number_of_classes}
+
         if self.ignore_index is not None:
             metric_args["ignore_index"] = self.ignore_index
 
@@ -106,10 +111,8 @@ class PytorchSegmentationModel(pl.LightningModule):
         fn = torch.cat([x["fn"] for x in outputs])
         tn = torch.cat([x["tn"] for x in outputs])
 
-        # Per-image IoU and dataset IoU calculations
-        per_image_iou = smp.metrics.iou_score(
-            tp, fp, fn, tn, reduction="micro-imagewise"
-        )
+
+
         dataset_iou = smp.metrics.iou_score(tp, fp, fn, tn, reduction="micro")
         iou_per_class = smp.metrics.iou_score(tp, fp, fn, tn, reduction="none")
         dataset_accuracy = smp.metrics.accuracy(tp, fp, fn, tn, reduction="micro")
@@ -122,7 +125,6 @@ class PytorchSegmentationModel(pl.LightningModule):
             f"{stage}_dataset_precision": dataset_precision,
             f"{stage}_dataset_recall": dataset_recall,
             f"{stage}_dataset_f1_score": dataset_f1_score,
-            f"{stage}_per_image_iou": per_image_iou,
             f"{stage}_dataset_iou": dataset_iou,
         }
         
@@ -178,3 +180,46 @@ class PytorchSegmentationModel(pl.LightningModule):
     def save_model(self, path):
         torch.save(self.model, path)
         print(f"Complete model saved in {path}")
+
+    def save_metrics(self, trainer, model,dataloader,experiment_name,filename="metrics.csv", mode="test",training_time=None):
+        if mode == "valid":
+            metrics = trainer.validate(model, dataloaders=dataloader, verbose=False)
+        elif mode == "test":
+            metrics = trainer.test(model, dataloaders=dataloader, verbose=False)
+        else:
+            raise ValueError("Mode must be 'valid' or 'test'.")
+
+        if not metrics:
+            print("No metrics to save.")
+            return metrics
+
+        df = pd.DataFrame(metrics)
+        df.insert(0, "Experiment", experiment_name)
+
+        if training_time is not None:
+            df["Training Time (min)"] = round(training_time / 60.0, 2)
+
+        if os.path.exists(filename):
+            df_existing = pd.read_csv(filename, sep=';')
+            df_combined = pd.concat([df_existing, df], ignore_index=True)
+        else:
+            df_combined = df
+
+        df_combined.to_csv(filename, sep=';', index=False)
+        print(f"Métricas guardadas en {filename}")
+        return metrics
+
+    def train(self, epochs, train_loader, valid_loader, test_loader, output_metrics_path):
+        trainer = pl.Trainer(max_epochs=epochs, log_every_n_steps=1)
+        start_time = time.time()
+        trainer.fit(self, train_dataloaders=train_loader, val_dataloaders=valid_loader)
+        end_time = time.time()
+        total_time = end_time - start_time
+        print(f"Total training time: {total_time / 60:.2f} minutes")
+
+        if valid_loader is not None:
+            valid_metrics = trainer.validate(self, dataloaders=valid_loader, verbose=False)
+            print(valid_metrics)
+
+        # Evaluación en test y guardar métricas 
+        test_metrics = self.save_metrics(trainer, self, test_loader, f"{self.model_name} - {self.encoder_name}", output_metrics_path, mode="test", training_time=total_time)

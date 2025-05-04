@@ -18,7 +18,7 @@ class ModelConfigFrame(ttk.Frame):
 
         self.semantic_models = ConfigHandler.CONFIGURATION_VALUES["semantic_segmentation_models"]
         self.instance_models = ConfigHandler.CONFIGURATION_VALUES["instance_segmentation_models"]
-        self.model_sizes = list(ConfigHandler.CONFIGURATION_VALUES["model_sizes"].keys())
+        self.model_sizes = list(ConfigHandler.CONFIGURATION_VALUES["model_sizes_smp"].keys())
         self.semantic_metrics = ConfigHandler.CONFIGURATION_VALUES["semantic_metrics"]
         self.instance_metrics = ConfigHandler.CONFIGURATION_VALUES["instance_metrics"]
 
@@ -29,7 +29,8 @@ class ModelConfigFrame(ttk.Frame):
                 "models": self.config_data.get("models", [{"model_name":"u-net","model_size":"medium"}]),
                 "evaluation_metrics": self.config_data.get("evaluation_metrics", ["accuracy"]),
                 "selection_metric": self.config_data.get("selection_metric", tk.StringVar(value="")),
-                "epochs": self.config_data.get("epochs", tk.StringVar(value="100"))
+                "epochs": self.config_data.get("epochs", tk.StringVar(value="100")),
+                "batch_size": self.config_data.get("batch_size", tk.StringVar(value="16"))
                 }
             
         self.model_data = self.config_data["model_data"]
@@ -130,15 +131,22 @@ class ModelConfigFrame(ttk.Frame):
         self.epochs_entry.grid(row=6, column=0,  padx=10, pady=5)
         ToolTip(self.epochs_label, msg="Number of times the entire dataset is passed through the model during training.")
 
+        self.batch_size_label = tk.Label(self.model_config_labelframe, text="Batch size *")
+        self.batch_size_label.grid(row=5, column=1, padx=10, pady=5)
+
+        self.batch_size_entry = tk.Entry(self.model_config_labelframe, textvariable=self.model_data['batch_size'], width=10, validate="key", validatecommand=val_int)
+        self.batch_size_entry.grid(row=6, column=1,  padx=10, pady=5)
+        ToolTip(self.batch_size_label, msg="Specifies the number of samples processed together in one step during model training.")
+
         self.additional_models_label = tk.Label(self.model_config_labelframe, text="Select additional models for comparison", wraplength=200)
-        self.additional_models_label.grid(row=5, column=1, padx=10, pady=5)
+        self.additional_models_label.grid(row=5, column=2, padx=10, pady=5)
 
         self.compare_models_var = tk.BooleanVar(value=False)
         self.compare_models_checkbox = ttk.Checkbutton(
             self.model_config_labelframe, variable=self.compare_models_var,
             command=self.toggle_comparison_section
         )
-        self.compare_models_checkbox.grid(row=6, column=1, padx=10, pady=5)
+        self.compare_models_checkbox.grid(row=6, column=2, padx=10, pady=5)
 
         self.comparison_frame = ttk.LabelFrame(self.model_frame, text="Comparison Models", padding=(20,10))
         self.comparison_frame.grid(row=3, column=0, columnspan=2, padx=10, pady=10, sticky="ew")
@@ -289,6 +297,15 @@ class ModelConfigFrame(ttk.Frame):
             return
         self.open_model_form(mode="edit", selected_index=selected_index[0])
 
+    def update_size_options(self, event=None, model_name=None, sizes=None):
+        selected_model = self.model_var.get()
+        if selected_model.lower() == model_name.lower():
+            new_sizes = [s for s in self.model_sizes if s in sizes]
+        else:
+            new_sizes = self.model_sizes
+        self.size_combobox["values"] = new_sizes
+        self.size_var.set(new_sizes[0]) 
+
     def open_model_form(self, mode="add", selected_index=None):
         self.model_form = tk.Toplevel(self)
         self.model_form.title("Add Model" if mode == "add" else "Edit Model")
@@ -333,6 +350,8 @@ class ModelConfigFrame(ttk.Frame):
         button_text = "Add" if mode == "add" else "Save"
         self.save_button = ttk.Button(self.model_form, text=button_text, command=lambda: self.save_model(mode, selected_index))
         self.save_button.grid(row=2, column=0, columnspan=2, padx=10, pady=10)
+
+        self.model_combobox.bind("<<ComboboxSelected>>", lambda event: self.update_size_options(event, model_name="oneformer", sizes=["Small","Large"]))
 
     def save_model(self, mode, selected_index):
         model_name = self.model_var.get()

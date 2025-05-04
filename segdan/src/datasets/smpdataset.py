@@ -5,9 +5,9 @@ import cv2
 import numpy as np
 
 
-class SemanticSegmentationDataset(BaseDataset):
+class SMPDataset(BaseDataset):
     
-    def __init__(self, images_dir, masks_dir, classes=None, augmentation=None, background=None):
+    def __init__(self, images_dir, masks_dir, classes, augmentation=None, background=None):
         self.ids = os.listdir(images_dir)
         self.images_fps = [os.path.join(images_dir, image_id) for image_id in self.ids]
         
@@ -43,15 +43,24 @@ class SemanticSegmentationDataset(BaseDataset):
         mask = cv2.imread(self.masks_fps[i], 0)
         
         # Create a blank mask to remap the class values
-        mask_remap = np.full_like(mask, 255 if self.background_class is not None else 0, dtype=np.uint8)
+        mask_remap = np.full_like(mask, 255, dtype=np.uint8)
 
         # Remap the mask according to the dynamically created class map
         for class_value, new_value in self.class_map.items():
             mask_remap[mask == class_value] = new_value
-            
+        
+        unique_vals = np.unique(mask)
+
+        valid_values = set(self.class_map.values()) | {255}
+        assert set(np.unique(mask_remap)).issubset(valid_values), f"Unexpected values in remapped mask: {np.unique(mask_remap)}"
+
         if self.augmentation:
             sample = self.augmentation(image=image, mask=mask_remap)
             image, mask_remap = sample["image"], sample["mask"]
+            
+            unique_vals = np.unique(mask_remap)
+            assert any(val != 255 for val in unique_vals), f"Mask at index {i} became empty after augmentation: {unique_vals}"
+
         image = image.transpose(2, 0, 1)
         return image, mask_remap
 

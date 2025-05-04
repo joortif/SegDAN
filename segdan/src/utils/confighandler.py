@@ -27,6 +27,16 @@ class ConfigHandler():
 
     VALID_IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg"}
 
+    SEMANTIC_SEGMENTATION_MODELS = {
+        "smp": ["U-Net", "DeepLabV3", "Segformer", "FPN", "PSPNet"],
+        "hf": ["MaskFormer", "Mask2Former", "OneFormer"],
+    }
+
+    INSTANCE_SEGMENTATION_MODELS = {
+        "instance": ["YOLO", "Mask R-CNN"],
+        "hf": ["Mask2Former", "OneFormer"]
+    }
+
     CONFIGURATION_VALUES = {
         "frameworks": ["huggingface", "pytorch", "tensorflow", "opencv"],
         "huggingface_models": ["openai/clip-vit-base-patch16", "google/vit-base-patch16-224", "facebook/deit-base-patch16-224", 
@@ -46,17 +56,23 @@ class ConfigHandler():
         "reduction_models": ["best_model", "kmeans", "agglomerative", "dbscan", "optics"],
 
         "segmentation": ["Semantic", "Instance"],
-        "semantic_segmentation_models": ["U-Net", "DeepLabV3", "Segformer", "FPN", "PSPNet"],
-        "instance_segmentation_models": ["YOLO", "Mask R-CNN"],
+        "semantic_segmentation_models": SEMANTIC_SEGMENTATION_MODELS["smp"] + SEMANTIC_SEGMENTATION_MODELS["hf"],
+        "instance_segmentation_models": INSTANCE_SEGMENTATION_MODELS["instance"] + INSTANCE_SEGMENTATION_MODELS["hf"],
         "semantic_metrics": ["Accuracy", "Precision", "Recall", "IoU (Intersection over Union)", "Dice score"],
         "instance_metrics": ["Accuracy", "Precision", "Recall", "IoU (Intersection over Union)", "mAP"],
 
         "stratification_types": ["pixels", "objects", "pixel_to_object_ratio"],
 
-        "model_sizes": {
-            "Small": "mobilenet_v2",
-            "Medium": "resnet34",
-            "Large": "resnet101",
+        "model_sizes_smp": {
+            "small": "mobilenet_v2",
+            "medium": "resnet34",
+            "large": "resnet101",
+        },
+
+        "model_sizes_hf": {
+            "small": "tiny",
+            "medium": "base",
+            "large": "large"
         }
     }
 

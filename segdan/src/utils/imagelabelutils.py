@@ -2,6 +2,8 @@ import os
 import cv2
 import numpy as np
 from PIL import Image
+import pandas as pd
+from tqdm import tqdm
 
 from src.exceptions.exceptions import ExtensionNotFoundException
 from src.extensions.extensions import LabelExtensions
@@ -103,3 +105,31 @@ class ImageLabelUtils:
                 return False
 
         return True
+    
+    @staticmethod
+    def get_classes_from_csv(csv_file, background: int |None=None):
+        df = pd.read_csv(csv_file, delimiter=";")
+
+        class_names_dict = {i: str(class_name) for i, class_name in enumerate(df["Class name"].values)}
+
+        if background:
+            class_names_dict[background] = "background"
+
+        return class_names_dict.values()
+
+    @staticmethod
+    def count_num_classes_png(label_dir):
+        all_classes = set()
+
+        for filename in tqdm(os.listdir(label_dir), desc="Counting number of classes from multiclass labels..."):
+            if filename.endswith('.png'):
+                path = os.path.join(label_dir, filename)
+                mask = np.array(Image.open(path))
+                unique_classes = np.unique(mask)
+                all_classes.update(unique_classes)
+
+        return len(all_classes), all_classes
+
+
+
+

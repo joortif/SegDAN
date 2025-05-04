@@ -23,7 +23,7 @@ class TrainingDataset():
         self.label_format = label_format
         self.original_label_path = original_label_path
 
-        self.image_files = sorted([os.path.join(img_path, f) for f in os.listdir(img_path) if f.endswith('.jpg')])
+        self.image_files = sorted([os.path.join(img_path, f) for f in os.listdir(img_path) if f.lower().endswith(('.jpg', '.jpeg', '.png', '.bmp', '.tiff'))])
         
         self.mask_paths_multilabel = sorted([os.path.join(multilabel_label_path, f) for f in os.listdir(multilabel_label_path) if f.endswith('.png')])
 
@@ -219,14 +219,23 @@ class TrainingDataset():
 
         print(f"Splits successfully saved in {output_path}")
         
-    def split(self, hold_out: bool, train_fraction: float = 0.7, val_fraction: float = 0.2, test_fraction: float = 0.1, n_folds: int=5, 
-              stratify: bool=True, stratification_strategy: str = "pixels",  background: int | None = None, random_state: int=123
-    ):
+    def split(self, general_data: dict, split_data: dict):
+
+        stratification_strategy = split_data["stratification_type"]
+        stratify = split_data["stratification"]
+        hold_out = split_data["split_method"]
         
+        random_state = split_data["stratification_random_seed"]
+        background = general_data["background"]
+        n_folds = split_data["cross_val"]["num_folds"]
+
         if stratify and stratification_strategy.lower() not in ["pixels", "objects", "pixel_to_object_ratio"]:
             raise ValueError("Invalid value for stratification_strategy. Must be 'pixels', 'objects' or 'pixel_to_object_ratio'.")
         
         if hold_out:
+            train_fraction = split_data["hold_out"]["train"]
+            val_fraction = split_data["hold_out"]["valid"]
+            test_fraction = split_data["hold_out"]["test"]
             if not np.isclose(train_fraction + val_fraction + test_fraction, 1.0):
                 raise ValueError("The sum of train_fraction, val_fraction, and test_fraction must equal 1.0")
 
@@ -234,8 +243,9 @@ class TrainingDataset():
             raise ValueError("The number of images and masks must be the same.")
         
         if hold_out: 
+            num_classes = None
             if stratify:
-                train_images, train_masks, val_images, val_masks, test_images, test_masks = self.stratify_split(train_fraction, val_fraction, test_fraction, stratification_strategy, background, random_state)
+                train_images, train_masks, val_images, val_masks, test_images, test_masks, num_classes = self.stratify_split(train_fraction, val_fraction, test_fraction, stratification_strategy, background, random_state)
             else:
                 train_images, train_masks, val_images, val_masks, test_images, test_masks = self.random_split(train_fraction, val_fraction, test_fraction, random_state)
         
@@ -245,9 +255,9 @@ class TrainingDataset():
 
             self.save_split_to_directory(train_df, val_df, test_df)
 
-            return
+            return num_classes
         
-        self.kfold_cross_validation(n_folds, stratify, stratification_strategy, background, random_state)
+        return self.kfold_cross_validation(n_folds, stratify, stratification_strategy, background, random_state)
 
         
     def stratify_split(self, train_fraction, val_fraction, test_fraction, stratification_strategy, background, random_state):
@@ -312,7 +322,7 @@ class TrainingDataset():
         test_images = [everything_else_images[i] for i in test_indexes]
         test_masks = [everything_else_masks[i] for i in test_indexes]
 
-        return train_images, train_masks, val_images, val_masks, test_images, test_masks
+        return train_images, train_masks, val_images, val_masks, test_images, test_masks, num_classes
     
     def random_split(self, train_fraction, val_fraction, test_fraction, random_state):
         
@@ -356,6 +366,7 @@ class TrainingDataset():
 
         used_val_indices = set()
         folds = []
+        num_classes = None
 
         if not stratify:
             print("Saving splits...")
@@ -383,7 +394,7 @@ class TrainingDataset():
                 fold_dir = os.path.join(self.output_path, f"fold_{fold_idx + 1}")
                 self.save_split_to_directory(train_df, val_df, None, fold_dir)
                 
-            return
+            return num_classes
 
         print("Starting stratification...")
 
@@ -428,4 +439,4 @@ class TrainingDataset():
             fold_dir = os.path.join(self.output_path, f"fold_{fold_idx + 1}")
             self.save_split_to_directory(train_df, val_df, None, fold_dir)
 
-        return
+        return num_classes
