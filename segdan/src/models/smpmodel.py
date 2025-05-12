@@ -4,6 +4,7 @@ import torch
 from torch.optim import lr_scheduler
 import time
 import pandas as pd
+import os
 
 class SMPModel(pl.LightningModule):
     def __init__(self, in_channels:int , out_classes: int, metrics, t_max, ignore_index=255, model_name="unet", encoder_name="resnet34", **kwargs):
@@ -84,6 +85,7 @@ class SMPModel(pl.LightningModule):
         else:
             prob_mask = logits_mask.softmax(dim=1)
             pred_mask = prob_mask.argmax(dim=1)
+
  
         # Compute true positives, false positives, false negatives, and true negatives
         if self.binary:
@@ -93,6 +95,10 @@ class SMPModel(pl.LightningModule):
 
         if self.ignore_index is not None:
             metric_args["ignore_index"] = self.ignore_index
+
+        print(logits_mask.shape)
+        print(pred_mask.shape)
+        print(mask.shape)
 
         tp, fp, fn, tn = smp.metrics.get_stats(pred_mask.long(), mask.long(), **metric_args)
                 

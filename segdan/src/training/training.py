@@ -93,8 +93,9 @@ def semantic_model_training(epochs: int, batch_size:int, evaluation_metrics: np.
 
                 train_adapter = HuggingFaceAdapterDataset(train_dataset, model.feature_extractor)
                 val_adapter = HuggingFaceAdapterDataset(val_dataset, model.feature_extractor) if val_dataset else None
+                test_adapter = HuggingFaceAdapterDataset(test_dataset, model.feature_extractor)
 
-                model.train(train_adapter, val_adapter)
+                model.train(train_adapter, val_adapter, test_adapter)
 
             else:
                 train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=4, persistent_workers=True)

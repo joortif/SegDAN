@@ -20,5 +20,5 @@ def dataset_split(dataset: TrainingDataset, general_data: dict, split_data: dict
 
     stratification_type = split_data.get("stratification_type", None)
     
-    dataset.split(split_method, train_percentage, valid_percentage, test_percentage, n_folds, stratify, stratification_type, background, random_seed)
+    dataset.split(general_data, split_data)
     return
