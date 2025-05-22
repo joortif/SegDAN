@@ -4,6 +4,7 @@ from tktooltip import ToolTip
 import json
 import yaml
 
+from src.utils.constants import SegmentationType
 from src.utils.confighandler import ConfigHandler
 from src.forms.formutils import FormUtils
 
@@ -241,14 +242,14 @@ class ModelConfigFrame(ttk.Frame):
     def update_segmentation(self, event):
         selected_type = self.model_data["segmentation"].get()
 
-        if selected_type.lower() == "semantic":
+        if selected_type.lower() == SegmentationType.SEMANTIC.value:
             self.models_list = self.semantic_models
             self.metrics_list = self.semantic_metrics
 
             self.update_listbox(self.evaluation_metrics_listbox, self.semantic_metrics)
             self.update_listbox(self.segmentation_models_listbox, self.semantic_models)
 
-        elif selected_type.lower() == "instance":
+        elif selected_type.lower() == SegmentationType.INSTANCE.value:
             self.models_list = self.instance_models
             self.metrics_list = self.instance_metrics
 

@@ -1,7 +1,8 @@
+import numpy as np
+
 from src.utils.utils import Utils
 from src.metrics.clusteringmetrics import get_scoring_function
-
-import numpy as np
+from src.utils.constants import ClusteringModelName
 
 class ClusteringModel():
 
@@ -61,14 +62,14 @@ class ClusteringModel():
 
             return (*params.values(), score, labels)
 
-        if model_name == "kmeans":
+        if model_name == ClusteringModelName.KMEANS.value:
             best_n_clusters, random_state, best_score, best_labels =  self.model.find_best_n_clusters(params["n_clusters_range"], self.metric, self.plot, self.output_path)
 
             self._plot_best_model(best_labels, model_name)
 
             return best_n_clusters, random_state, best_score, best_labels
         
-        if model_name == "agglomerative":
+        if model_name == ClusteringModelName.AGGLOMERATIVE.value:
 
             best_k, best_linkage, best_score, best_labels = self.model.find_best_agglomerative_clustering(params["n_clusters_range"], self.metric, params["linkages"], self.plot, self.output_path)
 
@@ -76,14 +77,14 @@ class ClusteringModel():
 
             return best_k, best_linkage, best_score, best_labels
         
-        if model_name == "dbscan":
+        if model_name == ClusteringModelName.DBSCAN.value:
 
             best_eps, best_min_samples, best_score, best_labels = self.model.find_best_DBSCAN(params["eps_range"], params["min_samples_range"], self.metric, self.plot, self.output_path, verbose)
 
             self._plot_best_model(best_labels, model_name)
             
             return best_eps, best_min_samples, best_score, best_labels
-        if model_name == "optics":
+        if model_name == ClusteringModelName.OPTICS.value:
 
             best_min_samples, best_score, best_labels = self.model.find_best_OPTICS(params["min_samples_range"], self.metric, self.plot, self.output_path, verbose)
 

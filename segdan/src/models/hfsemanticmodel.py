@@ -2,7 +2,7 @@ import time
 from transformers import Mask2FormerForUniversalSegmentation, MaskFormerForInstanceSegmentation, OneFormerForUniversalSegmentation, MaskFormerImageProcessor, OneFormerImageProcessor
 from transformers import TrainingArguments
 
-from segdan.src.metrics.segmentationmetrics import save_metrics
+from src.metrics.segmentationmetrics import save_metrics
 from src.trainers.hfsegmentationtrainer import HFSegmentationTrainer
 
 import os

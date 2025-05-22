@@ -2,6 +2,7 @@ import pytorch_lightning as pl
 import segmentation_models_pytorch as smp
 import torch
 from torch.optim import lr_scheduler
+from torch.optim.lr_scheduler import LRScheduler
 import time
 import pandas as pd
 import os

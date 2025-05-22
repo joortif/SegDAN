@@ -7,7 +7,7 @@ import webbrowser
 from src.utils.confighandler import ConfigHandler
 from src.forms.formutils import FormUtils
 from src.forms.clusteringmodelform import ClusteringModelForm
-
+from src.utils.constants import Framework
 
 import torchvision.models as models
 import tensorflow as tf
@@ -22,7 +22,7 @@ class ClusteringConfigFrame(ttk.Frame):
             if "clustering_data" not in self.config_data:
                 self.config_data["clustering_data"] = {
                     "embedding_model": {
-                        "framework": self.config_data.get("framework", tk.StringVar(value="opencv")),
+                        "framework": self.config_data.get("framework", tk.StringVar(value=Framework.OPENCV.value)),
                         "name": self.config_data.get("name", tk.StringVar(value="")),
                         "name_other": self.config_data.get("name_other", tk.StringVar(value="")),
                         "resize_height": self.config_data.get("resize_height", tk.StringVar(value="224")),
@@ -208,7 +208,7 @@ class ClusteringConfigFrame(ttk.Frame):
             f.configure(underline=True)
             self.custom_model_info_label.configure(font=f)
 
-            if framework == "huggingface":
+            if framework == Framework.HUGGINGFACE.value:
                 self.other_name_label.grid(row=0, column=3, pady=5, padx=5)
                 self.other_name_entry.grid(row=1, column=3, pady=5,padx=5)
 
@@ -221,7 +221,7 @@ class ClusteringConfigFrame(ttk.Frame):
             self.other_name_label.grid(row=0, column=5, pady=5, padx=5)
             self.other_name_entry.grid(row=1, column=5, pady=5,padx=5)
 
-            if framework == "pytorch":
+            if framework == Framework.PYTORCH.value:
                 self.custom_model_info_label.config(text = "Pytorch models for image feature extraction", fg="blue", cursor="hand2", wraplength=200)
                 self.custom_model_info_label.bind("<Button-1>", lambda e: webbrowser.open(ConfigHandler.FRAMEWORK_URLS["pytorch"]))
                 self.custom_model_info_label.grid(row=2, column=5, pady=5, padx=5)
@@ -262,7 +262,7 @@ class ClusteringConfigFrame(ttk.Frame):
         self.other_name_label.grid_remove()
         self.custom_model_info_label.grid_remove()
 
-        if framework == "opencv":
+        if framework == Framework.OPENCV.value:
             self.name_label.grid(row=0, column=1, padx=10, pady=5)
             self.lbp_name_entry.grid(row=1, column=1, padx=10, pady=5)
             self.resize_height_label.grid(row=0, column=2, padx=10)
@@ -277,7 +277,7 @@ class ClusteringConfigFrame(ttk.Frame):
             self.lbp_method_combobox.grid(row=3, column=3, padx=10, pady=5)
             return
 
-        elif framework == "huggingface":
+        elif framework == Framework.HUGGINGFACE.value:
             
             model_list = hf_models
             self.name_label.grid(row=0, column=1, padx=10, sticky="ew")
@@ -285,9 +285,9 @@ class ClusteringConfigFrame(ttk.Frame):
 
         else:
 
-            if framework == "pytorch":
+            if framework == Framework.PYTORCH.value:
                 model_list = py_models
-            elif framework == "tensorflow":
+            elif framework == Framework.TENSORFLOW.value:
                 model_list = tf_models 
 
             self.name_label.grid(row=0, column=1, padx=10, sticky="ew")
@@ -363,21 +363,21 @@ class ClusteringConfigFrame(ttk.Frame):
             self.edit_model_bt.grid_remove()
 
     def check_embedding_model(self, model_name, framework):
-        if framework.lower() == 'huggingface':
+        if framework.lower() == Framework.HUGGINGFACE.value:
             try:
                 model_info = huggingface_hub.model_info(model_name)
                 return True
             except Exception as e:
                 return False
             
-        if framework.lower() == 'pytorch':
+        if framework.lower() == Framework.PYTORCH.value:
             try:
                 model = getattr(models, model_name)
                 return True
             except AttributeError:
                 return False
             
-        if framework.lower() == 'tensorflow':
+        if framework.lower() == Framework.TENSORFLOW.value:
             try:
                 model = getattr(tf.keras.applications, model_name)
                 return True
@@ -390,7 +390,7 @@ class ClusteringConfigFrame(ttk.Frame):
         embedding_model_info = self.clustering_data["embedding_model"]
         framework = embedding_model_info["framework"].get()
 
-        if framework == "opencv":
+        if framework == Framework.OPENCV.value:
 
             if embedding_model_info["resize_height"].get().strip() == "":
                 tk.messagebox.showerror("Clustering configuration error", "Resize height must be specified when using an opencv feature extractor model.")
@@ -408,13 +408,13 @@ class ClusteringConfigFrame(ttk.Frame):
                 tk.messagebox.showerror("Clustering configuration error", "Num points for LBP must be specified when using an opencv feature extractor model.")
                 return False
             
-        elif framework == "huggingface":
+        elif framework == Framework.HUGGINGFACE.value:
 
             if embedding_model_info["name"].get().strip() == "":
                 tk.messagebox.showerror("Clustering configuration error", f"The name of the {framework} embedding model to use must be specified.")
                 return False
 
-        elif framework == "pytorch":
+        elif framework == Framework.PYTORCH.value:
 
             if embedding_model_info["name"].get().strip() == "":
                 tk.messagebox.showerror("Clustering configuration error", f"The name of the {framework} embedding model to use must be specified.")
@@ -428,7 +428,7 @@ class ClusteringConfigFrame(ttk.Frame):
                 tk.messagebox.showerror("Clustering configuration error", f"Resize width must be specified when using a {framework} embedding model.")
                 return False
             
-        elif framework == "tensorflow":
+        elif framework == Framework.TENSORFLOW.value:
 
             if embedding_model_info["name"].get().strip() == "":
                 tk.messagebox.showerror("Clustering configuration error", f"The name of the {framework} embedding model to use must be specified.")

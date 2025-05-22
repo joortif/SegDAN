@@ -4,12 +4,20 @@ import os
 import cv2
 import numpy as np
 
+from src.utils.confighandler import ConfigHandler
 
 class SMPDataset(BaseDataset):
     
     def __init__(self, images_dir, masks_dir, classes, augmentation=None, background=None):
-        self.ids = os.listdir(images_dir)
-        self.images_fps = [os.path.join(images_dir, image_id) for image_id in self.ids]
+        self.images_fps = []
+        self.ids = []
+        for fname in os.listdir(images_dir):
+            if fname.lower().endswith(ConfigHandler.VALID_IMAGE_EXTENSIONS):
+                fpath = os.path.join(images_dir, fname)
+                img = cv2.imread(fpath)
+                if img is not None:
+                    self.images_fps.append(fpath)
+                    self.ids.append(fname)
         
         masks_ids = [os.path.splitext(image_id)[0]+'.png' for image_id in self.ids]
         self.masks_fps = [os.path.join(masks_dir, image_id) for image_id in masks_ids]

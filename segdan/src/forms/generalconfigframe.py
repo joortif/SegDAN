@@ -3,6 +3,7 @@ import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 from tktooltip import ToolTip
 
+from src.utils.constants import LabelFormat
 from src.forms.colorconfigform import ColorConfigForm
 from src.forms.formutils import FormUtils
 from src.utils.confighandler import ConfigHandler
@@ -240,9 +241,9 @@ class GeneralConfigFrame(ttk.Frame):
 
     def select_file(self, file_type, extension):
         filetypes = [("All Files", "*.*"), ("Text Files", "*.txt"), ("JSON Files", "*.json")]
-        if extension == "txt":
+        if extension == LabelFormat.TXT.value:
             filetypes = [filetypes[1]]
-        elif extension == "json":
+        elif extension == LabelFormat.JSON.value:
             filetypes = [filetypes[2]]
         file_path = filedialog.askopenfilename(title="Select File", filetypes=filetypes)
         
@@ -287,7 +288,7 @@ class GeneralConfigFrame(ttk.Frame):
                     
                 self.general_data["class_mapping"] = class_mapping
                     
-                if self.general_data["label_format"].get() == "mask":
+                if self.general_data["label_format"].get() == LabelFormat.MASK.value:
                     self.update_color_map()
                 messagebox.showinfo("Success", "Class mapping file loaded successfully.")
         except Exception as e:
@@ -308,8 +309,8 @@ class GeneralConfigFrame(ttk.Frame):
         
         show_image_related = bool(label_format)  
         show_class_mapping = label_format != "" and label_format != "json"  
-        show_label_file = label_format == "json"  
-        show_color_dict = label_format == "mask"
+        show_label_file = label_format == LabelFormat.JSON.value  
+        show_color_dict = label_format == LabelFormat.MASK.value
 
         for widget in [self.color_map_label, self.add_color_bt, self.transformation_color_dict_text, 
                     self.image_path_label, self.entry_images, self.img_path_bt,
@@ -400,7 +401,7 @@ class GeneralConfigFrame(ttk.Frame):
             return False
         
         label_ext = f".{label_format}"
-        if label_format == "mask":
+        if label_format == LabelFormat.MASK.value:
             label_ext = ConfigHandler.VALID_IMAGE_EXTENSIONS
 
         if label_format != "json":

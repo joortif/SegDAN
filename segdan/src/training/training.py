@@ -1,6 +1,7 @@
 import os 
 import numpy as np
 
+from src.utils.constants import SegmentationType
 from src.models.smpmodel import SMPModel
 from src.models.hfsemanticmodel import HFFormerModel
 
@@ -30,7 +31,7 @@ def model_training(model_data: dict, general_data:dict, split_path: str, model_o
 
     os.makedirs(model_output_path, exist_ok=True)
     
-    if segmentation_type == "semantic":
+    if segmentation_type == SegmentationType.SEMANTIC.value:
         models = rename_model_sizes(models)
         semantic_model_training(epochs, batch_size, evaluation_metrics, selection_metric, models, split_path, hold_out, classes, background, model_output_path)
 

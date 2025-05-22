@@ -3,6 +3,7 @@ from tkinter import ttk
 import copy
 
 from tktooltip import ToolTip
+from src.utils.constants import ClusteringModelName
 from src.utils.confighandler import ConfigHandler
 
 class ClusteringModelForm():
@@ -118,16 +119,16 @@ class ClusteringModelForm():
         if model != "best model":
             self.model_frame.grid()
 
-        if model == "kmeans":
+        if model == ClusteringModelName.KMEANS.value:
              self.show_kmeans_params()
 
-        elif model == "agglomerative":
+        elif model == ClusteringModelName.AGGLOMERATIVE.value:
             self.show_agglomerative_params()
 
-        elif model == "dbscan":
+        elif model == ClusteringModelName.DBSCAN.value:
             self.show_dbscan_params()
 
-        elif model == "optics":
+        elif model == ClusteringModelName.OPTICS.value:
             self.show_optics_params()     
         elif model == "best model":
             self.model_frame.grid_remove()
@@ -363,7 +364,7 @@ class ClusteringModelForm():
                         tk.messagebox.showerror("Error", f"Min value of clusters range must be less than max value.")
                         return False
                 
-            if model == "dbscan":
+            if model == ClusteringModelName.DBSCAN.value:
                 if "eps_range" in params:
                     min_eps_range = params["eps_range"]["min"]
                     max_eps_range = params["eps_range"]["max"]
@@ -376,7 +377,7 @@ class ClusteringModelForm():
                         tk.messagebox.showerror("Error", f"Min value of eps range must be less than max value.")
                         return False
 
-            if model in ["dbscan","optics"]:
+            if model in [ClusteringModelName.DBSCAN.value,ClusteringModelName.OPTICS.value]:
                 if "min_samples" in params:
                     min_samples = params["min_samples"]
                     if min_samples == "":

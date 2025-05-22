@@ -14,6 +14,8 @@ from sklearn.utils import shuffle
 
 import cv2
 
+from src.utils.constants import StratificationStrategy
+
 class TrainingDataset():
 
     def __init__(self, img_path, multilabel_label_path, output_path, label_format, original_label_path):
@@ -281,9 +283,9 @@ class TrainingDataset():
         image_paths, mask_paths = shuffle(self.image_files, self.mask_paths_multilabel, random_state=random_state)
 
         print("Starting classes stratification...")
-        if stratification_strategy.lower() == "pixels":
+        if stratification_strategy.lower() == StratificationStrategy.PIXELS.value:
             result = self.calculate_pixel_distribution(mask_paths, background)
-        elif stratification_strategy.lower() == "objects":
+        elif stratification_strategy.lower() == StratificationStrategy.OBJECTS.value:
             result = self.calculate_object_number(mask_paths, background)
         else:
             result = self.calculate_pixel_ratio(mask_paths, background)
@@ -398,9 +400,9 @@ class TrainingDataset():
 
         print("Starting stratification...")
 
-        if stratification_strategy.lower() == "pixels":
+        if stratification_strategy.lower() == StratificationStrategy.PIXELS.value:
             result = self.calculate_pixel_distribution(mask_paths, background)
-        elif stratification_strategy.lower() == "objects":
+        elif stratification_strategy.lower() == StratificationStrategy.OBJECTS.value:
             result = self.calculate_object_number(mask_paths, background)
         else:
             result = self.calculate_pixel_ratio(mask_paths, background)

@@ -2,6 +2,8 @@ import os
 import yaml
 import numpy as np
 
+from src.utils.constants import ClusteringModelName, Framework, SegmentationType
+
 class ConfigHandler():
     
     REQUIRED_KEYS_CONFIG = [
@@ -25,7 +27,7 @@ class ConfigHandler():
         "epochs"
     ]
 
-    VALID_IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg"}
+    VALID_IMAGE_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.bmp', '.tiff'}
 
     SEMANTIC_SEGMENTATION_MODELS = {
         "smp": ["U-Net", "DeepLabV3", "Segformer", "FPN", "PSPNet"],
@@ -305,10 +307,10 @@ class ConfigHandler():
             if embedding_model.get("framework") not in ConfigHandler.CONFIGURATION_VALUES['frameworks']:
                 raise ValueError(f"Invalid embedding framework '{embedding_model.get('framework')}'. Must be one of: {ConfigHandler.CONFIGURATION_VALUES['frameworks']}.")
             
-            if embedding_model.get("framework") != "opencv" and not embedding_model.get("name"):
+            if embedding_model.get("framework") != Framework.OPENCV.value and not embedding_model.get("name"):
                 raise ValueError(f"A model 'name' must be specified for framework '{embedding_model.get('framework')}'.")
             
-            if embedding_model.get("framework") in ["tensorflow", "opencv"]:
+            if embedding_model.get("framework") in [Framework.TENSORFLOW.value, Framework.OPENCV.value]:
                 if "resize_height" not in embedding_model:
                     print(f"Resize height not detected for '{embedding_model.get('framework')}'. Using default value of {ConfigHandler.DEFAULT_VALUES['resize_height']}.")
                     embedding_model["resize_height"] = ConfigHandler.DEFAULT_VALUES["resize_height"]
@@ -321,7 +323,7 @@ class ConfigHandler():
                 elif not isinstance(embedding_model["resize_width"], int):
                     raise ValueError(f"The value of 'resize_width' must be an integer, but got {type(embedding_model['resize_width'])}.")
 
-            if embedding_model.get("framework") == "opencv":
+            if embedding_model.get("framework") == Framework.OPENCV.value:
                 if "lbp_radius" not in embedding_model:
                     print(f"LBP radius not detected for OpenCV. Using default value of {ConfigHandler.DEFAULT_VALUES['lbp_radius']}.")
                     embedding_model["lbp_radius"] = ConfigHandler.DEFAULT_VALUES["lbp_radius"]
@@ -348,7 +350,7 @@ class ConfigHandler():
                 if model not in ConfigHandler.CONFIGURATION_VALUES['clustering_models']:
                     raise ValueError(f"Invalid model '{model}' in 'clustering_models'. Must be one of: {ConfigHandler.CONFIGURATION_VALUES['clustering_models']}.")
 
-                if model == "kmeans":
+                if model == ClusteringModelName.KMEANS.value:
                     if "n_clusters_range" in params and "n_clusters" in params:
                         raise ValueError(f"Model '{model}' cannot have both 'n_clusters_range' and 'n_clusters' defined.")
                     
@@ -359,7 +361,7 @@ class ConfigHandler():
                     if "n_clusters_range" in params:
                         data["clustering_models"][model]["n_clusters_range"] = ConfigHandler.validate_range(params["n_clusters_range"], "n_clusters_range")
 
-                elif model == "agglomerative":
+                elif model == ClusteringModelName.AGGLOMERATIVE.value:
 
                     if params.get("n_clusters_range") and params.get("n_clusters"):
                         raise ValueError(f"Model '{model}' cannot have both 'n_clusters_range' and 'n_clusters' defined.")
@@ -379,7 +381,7 @@ class ConfigHandler():
                         if not all(linkage in ConfigHandler.CONFIGURATION_VALUES["linkages"] for linkage in params.get("linkages", [])):
                             raise ValueError(f"Invalid linkage '{params['linkages']}'. Must be one (or more) of {ConfigHandler.CONFIGURATION_VALUES['linkages']}.")
 
-                elif model == "dbscan":
+                elif model == ClusteringModelName.DBSCAN.value:
                     if ("eps" in params or "min_samples" in params) and ("eps_range" in params or "min_samples_range" in params):
                         raise ValueError(f"Model '{model}' cannot mix fixed values and ranges for parameters 'eps' and 'min_samples'.")
                     
@@ -389,7 +391,7 @@ class ConfigHandler():
                     if "min_samples_range" in params:
                         data["clustering_models"][model]["min_samples_range"] = ConfigHandler.validate_range(params["min_samples_range"], "min_samples_range")
 
-                elif model == "optics":
+                elif model == ClusteringModelName.OPTICS.value:
                     if "min_samples" in params and "min_samples_range" in params:
                         raise ValueError(f"Model '{model}' cannot have both 'min_samples' and 'min_samples_range' defined.")
                     
@@ -471,26 +473,26 @@ class ConfigHandler():
                     if not isinstance(data["reduction_model"][selected_model], dict):
                         raise ValueError(f"The parameters for '{selected_model}' must be provided as a dictionary.")
                     
-                    if selected_model == "kmeans":
+                    if selected_model == ClusteringModelName.KMEANS.value:
                         if "n_clusters" not in model_params or not isinstance(model_params["n_clusters"], int) or model_params["n_clusters"] <= 0:
                             raise ValueError("KMeans requires a positive integer 'n_clusters' parameter.")
                         if "random_state" in model_params and not isinstance(model_params["random_state"], int):
                             print(f"The 'random_state' parameter for KMeans must be an integer. Using default random_state of {ConfigHandler.DEFAULT_VALUES['random_state']}")
                             data["clustering_models"][model]["random_state"] = ConfigHandler.DEFAULT_VALUES['random_state']
 
-                    elif selected_model == "agglomerative":
+                    elif selected_model == ClusteringModelName.AGGLOMERATIVE.value:
                         if "n_clusters" not in model_params or not isinstance(model_params["n_clusters"], int) or model_params["n_clusters"] <= 0:
                             raise ValueError("Agglomerative clustering requires a positive integer 'n_clusters' parameter.")
                         if "linkage" not in model_params or model_params["linkage"] not in ConfigHandler.CONFIGURATION_VALUES["linkages"]:
                             raise ValueError(f"Invalid 'linkage' parameter for Agglomerative clustering. Must be one of: {ConfigHandler.CONFIGURATION_VALUES['linkages']}.")
 
-                    elif selected_model == "dbscan":
+                    elif selected_model == ClusteringModelName.DBSCAN.value:
                         if "eps" not in model_params or not isinstance(model_params["eps"], (int, float)) or model_params["eps"] <= 0:
                             raise ValueError("DBSCAN requires a positive 'eps' parameter.")
                         if "min_samples" not in model_params or not isinstance(model_params["min_samples"], int) or model_params["min_samples"] <= 0:
                             raise ValueError("DBSCAN requires a positive integer 'min_samples' parameter.")
 
-                    elif selected_model == "optics":
+                    elif selected_model == ClusteringModelName.OPTICS.value:
                         if "min_samples" not in model_params or not isinstance(model_params["min_samples"], int) or model_params["min_samples"] <= 0:
                             raise ValueError("OPTICS requires a positive integer 'min_samples' parameter.")
                 else:
@@ -567,12 +569,12 @@ class ConfigHandler():
         if data.get("segmentation") not in ConfigHandler.CONFIGURATION_VALUES["segmentation"]:
             raise ValueError(f"Invalid segmentation type. Must be one of: {ConfigHandler.CONFIGURATION_VALUES['segmentation']}.")
 
-        if data["segmentation"] == "semantic":
+        if data["segmentation"] == SegmentationType.SEMANTIC.value:
             models = data.get("semantic_segmentation_models", [])
             if not all(model in ConfigHandler.CONFIGURATION_VALUES["semantic_segmentation_models"] for model in models):
                 raise ValueError(f"Invalid semantic segmentation models. Must be one of: {ConfigHandler.CONFIGURATION_VALUES['semantic_segmentation_models']}.")
 
-        if data["segmentation"] == "instance":
+        if data["segmentation"] == SegmentationType.INSTANCE.value:
             models = data.get("instance_segmentation_models", [])
             if not all(model in ConfigHandler.CONFIGURATION_VALUES["instance_segmentation_models"] for model in models):
                 raise ValueError(f"Invalid instance segmentation models. Must be one of: {ConfigHandler.CONFIGURATION_VALUES['instance_segmentation_models']}.")

@@ -1,4 +1,5 @@
 
+from src.utils.constants import ClusteringModelName
 from src.extensions.extensions import LabelExtensions
 from src.utils.imagelabelutils import ImageLabelUtils
 from src.clustering.clusteringfactory import ClusteringFactory
@@ -107,7 +108,7 @@ def reduce_dataset(config, clustering_results, evaluation_metric, dataset, label
         "output_directory": output_dir
     }
 
-    if reduction_model_name == "kmeans":
+    if reduction_model_name == ClusteringModelName.KMEANS.value:
         select_params.pop("existing_labels")
         select_params["n_clusters"] = reduction_model_info["n_clusters"]
     elif reduction_model_name in ["dbscan", "optics"]:

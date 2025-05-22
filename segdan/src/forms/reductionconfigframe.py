@@ -2,6 +2,7 @@ import tkinter as tk
 from tkinter import ttk
 from tktooltip import ToolTip
 
+from src.utils.constants import ClusteringModelName
 from src.utils.confighandler import ConfigHandler
 
 class ReductionConfigFrame(ttk.Frame):
@@ -20,8 +21,6 @@ class ReductionConfigFrame(ttk.Frame):
                 "reduction_model": self.config_data.get("reduction_model", tk.StringVar(value="")),
                 "use_reduced": self.config_data.get("use_reduced", tk.BooleanVar(value=False))
             }
-
-        
 
         self.reduction_data = self.config_data["reduction_data"]
         self.controller = controller
@@ -161,7 +160,7 @@ class ReductionConfigFrame(ttk.Frame):
 
         reduction_model = self.reduction_data["reduction_model"].get()
 
-        if reduction_model == "dbscan" or reduction_model == "optics" or (reduction_model == "best_model" and ("dbscan" in self.reduction_models or "optics" in self.reduction_models)):
+        if reduction_model == ClusteringModelName.DBSCAN.value or reduction_model == ClusteringModelName.OPTICS.value or (reduction_model == "best_model" and ("dbscan" in self.reduction_models or "optics" in self.reduction_models)):
             self.include_outliers_label.grid(row=6, column=1, padx=10, pady=5)
             self.include_outliers_checkbt.grid(row=7, column=1, padx=10, pady=5)
             return
