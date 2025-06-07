@@ -98,11 +98,20 @@ class ImageLabelUtils:
     def all_images_are_color(directory):
         for filename in os.listdir(directory):
             image_path = os.path.join(directory, filename)
-            image = Image.open(image_path)
-            img_array = np.array(image)
-                
-            if not (img_array.ndim == 3 and img_array.shape[2] == 3): 
+            if not os.path.isfile(image_path):
+                continue
+
+            image = cv2.imread(image_path, cv2.IMREAD_UNCHANGED)
+            if image is None:
+                continue  
+
+            if len(image.shape) == 2:
                 return False
+
+            if image.shape[2] >= 3:
+                b, g, r = image[..., 0], image[..., 1], image[..., 2]
+                if np.array_equal(b, g) and np.array_equal(b, r):
+                    return False  
 
         return True
     

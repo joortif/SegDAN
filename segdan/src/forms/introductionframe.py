@@ -20,7 +20,7 @@ class IntroductionFrame(ttk.Frame):
         options = [
             "Perform data analysis, creating graphs and reports to explain the content of the dataset such as number of objects for each class, bounding boxes and object areas metrics...",
             "Use image embedding models to study the similarity of images. Then the user can apply different clustering models to find patterns in the images and visualize the most similar ones.",
-            "Reduce the dataset. Once the clusters are defined, they can be used to reduce the dataset by selecting a subset from each one. By selecting a representative subset, the user can apply the active learning technique*.",
+            "Reduce the dataset. Once the clusters are defined, they can be used to reduce the dataset by selecting a subset from each one. By selecting a representative subset, the user can apply the active learning technique.",
             "Train and save the best segmentation model. The images and labels can be used to train various segmentation models, and by selecting a performance metric, the best model will be chosen from the trained models."        ]
 
         for option in options:

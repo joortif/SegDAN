@@ -3,9 +3,12 @@ import numpy as np
 import logging
 from transformers.utils import logging as hf_logging
 
-class Transformer():
+class Converter():
 
-    def __init__(self):
+    def __init__(self, input_data: str, output_dir: str):
+
+        self.input_data = input_data
+        self.output_dir = output_dir
         
         hf_logging.set_verbosity_error()
 
@@ -31,5 +34,5 @@ class Transformer():
         return polygon
     
     
-    def transform(self, input_data: str, output_dir: str, **kwargs):
+    def convert(self):
         raise NotImplementedError("Subclasses must implement this method")

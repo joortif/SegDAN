@@ -12,7 +12,7 @@ class SMPDataset(BaseDataset):
         self.images_fps = []
         self.ids = []
         for fname in os.listdir(images_dir):
-            if fname.lower().endswith(ConfigHandler.VALID_IMAGE_EXTENSIONS):
+            if fname.lower().endswith(tuple(ConfigHandler.VALID_IMAGE_EXTENSIONS)):
                 fpath = os.path.join(images_dir, fname)
                 img = cv2.imread(fpath)
                 if img is not None:

@@ -3,7 +3,7 @@ import numpy as np
 
 from src.utils.constants import SegmentationType
 from src.models.smpmodel import SMPModel
-from src.models.hfsemanticmodel import HFFormerModel
+from src.models.hfstransformermodel import HFTransformerModel
 
 from src.datasets.hfdataset import HuggingFaceAdapterDataset
 from src.datasets.smpdataset import SMPDataset
@@ -90,7 +90,7 @@ def semantic_model_training(epochs: int, batch_size:int, evaluation_metrics: np.
             model_name = model_config["model_name"]
 
             if model_name in hf_models_lower:
-                model = HFFormerModel(model_name, model_size, classes, evaluation_metrics, selection_metric, epochs, batch_size)
+                model = HFTransformerModel(model_name, model_size, classes, evaluation_metrics, selection_metric, epochs, batch_size)
 
                 train_adapter = HuggingFaceAdapterDataset(train_dataset, model.feature_extractor)
                 val_adapter = HuggingFaceAdapterDataset(val_dataset, model.feature_extractor) if val_dataset else None
@@ -106,9 +106,9 @@ def semantic_model_training(epochs: int, batch_size:int, evaluation_metrics: np.
                 T_MAX = epochs * len(train_loader)
                 out_classes = len([cls for cls in classes if cls.lower() !="background"])
 
-                model = SMPModel(3, out_classes, evaluation_metrics, T_MAX, background, model_name, model_size)
+                model = SMPModel(3, out_classes, evaluation_metrics, epochs, T_MAX, background, model_name, model_size)
 
-                model.train(epochs, train_loader, val_loader, test_loader, os.path.join(output_path, "metrics.csv"))
+                model.train(train_loader, val_loader, test_loader, os.path.join(output_path, "metrics.csv"))
 
             
 

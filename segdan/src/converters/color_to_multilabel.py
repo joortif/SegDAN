@@ -1,5 +1,5 @@
+from src.converters.converter import Converter
 from src.utils.imagelabelutils import ImageLabelUtils
-from src.transformers.transformer import Transformer
 
 import numpy as np
 import cv2
@@ -8,32 +8,33 @@ import random
 from tqdm import tqdm
 import matplotlib.pyplot as plt
 
-class ColorToMultilabelTransformer(Transformer):
+class ColorToMultilabelConverter(Converter):
 
     num_images_mosaic = 4
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, input_data: str, output_dir: str, color_dict: dict | None = None):
+        super().__init__(input_data, output_dir)
+        self.color_dict = color_dict
 
-    def generate_color_dict(self, input_data: str):
-        label_files = [f for f in os.listdir(input_data) if os.path.isfile(os.path.join(input_data, f))]
+    def generate_color_dict(self):
+        label_files = [f for f in os.listdir(self.input_data) if os.path.isfile(os.path.join(self.input_data, f))]
         unique_colors = set()
 
         for filename in tqdm(label_files, desc="Generating unique colors..."):
-            label_path = os.path.join(input_data, filename)
+            label_path = os.path.join(self.input_data, filename)
             color_mask = cv2.imread(label_path, cv2.IMREAD_UNCHANGED)
             colors = np.unique(color_mask.reshape(-1, color_mask.shape[-1]), axis=0)
             unique_colors.update(map(tuple, colors))
 
         assigned_colors = {}
-        image_dir = input_data.replace('labels', 'images')
+        image_dir = self.input_data.replace('labels', 'images')
         
         for color in unique_colors:
 
             valid_files = []
 
             for filename in label_files:
-                label_path = os.path.join(input_data, filename)
+                label_path = os.path.join(self.input_data, filename)
                 mask = cv2.imread(label_path, cv2.IMREAD_UNCHANGED)
                 if np.any(np.all(mask.reshape(-1, mask.shape[-1]) == color, axis=1)):
                     valid_files.append(filename)
@@ -42,7 +43,7 @@ class ColorToMultilabelTransformer(Transformer):
             fig, axes = plt.subplots(1, self.num_images_mosaic, figsize=(15, 5))
             
             for i, filename in enumerate(selected_files):
-                label_path = os.path.join(input_data, filename)
+                label_path = os.path.join(self.input_data, filename)
                 image_path = ImageLabelUtils.label_to_image(label_path, image_dir, '.jpg')
 
                 img = cv2.imread(image_path)
@@ -71,30 +72,30 @@ class ColorToMultilabelTransformer(Transformer):
             
         return assigned_colors
 
-    def transform(self, input_data: str, output_dir: str, color_dict: dict | None = None):
+    def convert(self):
         masks = []
-        os.makedirs(output_dir, exist_ok=True)
+        os.makedirs(self.output_dir, exist_ok=True)
 
-        label_files = [f for f in os.listdir(input_data) if os.path.isfile(os.path.join(input_data, f))]
+        label_files = [f for f in os.listdir(self.input_data) if os.path.isfile(os.path.join(self.input_data, f))]
 
-        if color_dict is None:
+        if self.color_dict is None:
             print("No color dictionary found. It will be created automatically...")
-            color_dict = self.generate_color_dict(input_data)
+            self.color_dict = self.generate_color_dict(self.input_data)
 
         for filename in tqdm(label_files, desc="Converting labels from color format to multilabel..."):
-            label_path = os.path.join(input_data, filename)
+            label_path = os.path.join(self.input_data, filename)
             color_mask = cv2.imread(label_path)
             multilabel_mask = np.zeros(color_mask.shape[:2], dtype=np.uint8)
             pixel_colors = color_mask.reshape(-1, color_mask.shape[-1])
 
             for idx, pixel_color in enumerate(pixel_colors):
                 color_tuple = tuple(pixel_color)
-                if color_tuple in color_dict:
-                    multilabel_mask.reshape(-1)[idx] = color_dict[color_tuple]
+                if color_tuple in self.color_dict:
+                    multilabel_mask.reshape(-1)[idx] = self.color_dict[color_tuple]
 
             multilabel_mask = multilabel_mask.reshape(color_mask.shape[:2])
             masks.append(multilabel_mask)
 
-            ImageLabelUtils.save_multilabel_mask(multilabel_mask, filename, output_dir)
+            ImageLabelUtils.save_multilabel_mask(multilabel_mask, filename, self.output_dir)
 
         return masks

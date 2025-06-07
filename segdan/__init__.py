@@ -1,2 +1,2 @@
-from src.transformers.yolo_to_multilabel import YOLOToMultilabelTransformer
-from src.transformers.json_to_multilabel import JSONToMultilabelTransformer
+from src.converters.yolo_to_multilabel import YOLOToMultilabelTransformer
+from src.converters.json_to_multilabel import JSONToMultilabelTransformer

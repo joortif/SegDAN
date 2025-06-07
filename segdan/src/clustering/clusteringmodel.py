@@ -18,7 +18,7 @@ class ClusteringModel():
 
     def _clustering(self, scoring_function, params):
         if self.plot:
-            labels = self.model.clustering(**params, output=self.output_path)
+            labels = self.model.clustering(**params, reduction = self.visualization_technique, output=self.output_path)
         else:
             labels = self.model.clustering(**params)
         return scoring_function(self.embeddings, labels), labels

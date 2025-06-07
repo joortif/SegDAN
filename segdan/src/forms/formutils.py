@@ -29,7 +29,6 @@ class FormUtils():
                 return value.get()
             if isinstance(value, tk.StringVar):
                 val = value.get()
-                print(val)
                 try:
                     return int(val)
                 except ValueError:

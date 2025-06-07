@@ -8,12 +8,9 @@ from tqdm import tqdm
 from skmultilearn.model_selection import IterativeStratification
 from sklearn.model_selection import KFold, train_test_split
 
-from PIL import Image
-
 from sklearn.utils import shuffle
 
-import cv2
-
+from src.stratification.stratification_fn import calculate_object_number, calculate_pixel_ratio, calculate_pixel_distribution
 from src.utils.constants import StratificationStrategy
 
 class TrainingDataset():
@@ -28,121 +25,6 @@ class TrainingDataset():
         self.image_files = sorted([os.path.join(img_path, f) for f in os.listdir(img_path) if f.lower().endswith(('.jpg', '.jpeg', '.png', '.bmp', '.tiff'))])
         
         self.mask_paths_multilabel = sorted([os.path.join(multilabel_label_path, f) for f in os.listdir(multilabel_label_path) if f.endswith('.png')])
-
-
-    def calculate_pixel_distribution(self, mask_paths, background: int | None = None):
-        all_distributions = []
-        unique_classes = set()
-
-        for mask_path in tqdm(mask_paths, desc="Calculating pixel distribution for each class"):
-            with Image.open(mask_path) as mask_image:
-                mask = np.array(mask_image)
-                unique, counts = np.unique(mask, return_counts=True)
-
-                if background is not None:
-                    mask_exclude_idx = np.where(unique == background)[0]
-                    if len(mask_exclude_idx) > 0: 
-                        unique = np.delete(unique, mask_exclude_idx)
-                        counts = np.delete(counts, mask_exclude_idx)
-
-                unique_classes.update(unique)
-
-                distribution = {class_id: count for class_id, count in zip(unique, counts)}
-                all_distributions.append(distribution)
-                
-        num_classes = len(unique_classes)
-        sorted_classes = sorted(unique_classes)
-
-        matrix_distributions = np.zeros((len(mask_paths), num_classes))
-
-        for i, distribution in enumerate(all_distributions):
-            for class_id, count in distribution.items():
-                class_index = sorted_classes.index(class_id)
-                matrix_distributions[i, class_index] = count
-
-        row_sums = matrix_distributions.sum(axis=1, keepdims=True)  
-        matrix_distributions = np.divide(matrix_distributions, row_sums, where=row_sums != 0)  
-        
-        return {
-            "distributions": matrix_distributions,
-            "num_classes": num_classes
-        }
-
-    def calculate_object_number(self, masks, background: int | None = None):
-        all_objects_per_class = []
-        unique_classes = set()
-
-        for mask_path in tqdm(masks, desc="Reading number of classes from images"):
-            with Image.open(mask_path) as mask_image:
-                mask = np.array(mask_image)
-                unique = np.unique(mask)
-
-                if background is not None:
-                    unique = unique[unique != background]
-
-                unique_classes.update(unique)
-
-        sorted_classes = sorted(unique_classes)  
-        num_classes = len(sorted_classes)
-        class_mapping = {class_id: idx for idx, class_id in enumerate(sorted_classes)}
-
-        for mask_path in tqdm(masks, desc="Calculating number of objects for each class"):
-            with Image.open(mask_path) as mask_image:
-                mask = np.array(mask_image)
-
-                objects_per_class = np.zeros(num_classes) 
-
-                for class_id in np.unique(mask):
-                    if background is not None and class_id == background:
-                        continue
-
-                    if class_id in class_mapping:
-                        class_mask = np.where(mask == class_id, 255, 0).astype(np.uint8)
-                        contours, _ = cv2.findContours(class_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-                        objects_per_class[class_mapping[class_id]] = len(contours)
-
-                all_objects_per_class.append(objects_per_class)
-
-        return {
-            "distributions": np.array(all_objects_per_class),
-            "num_classes": num_classes,
-            "class_mapping": class_mapping
-        }
-    
-    def calculate_pixel_ratio(self, masks, background: int | None = None):
-        object_info = self.calculate_object_number(masks, background)
-        objects_per_class = object_info["distributions"]  
-        num_classes = object_info["num_classes"]
-        class_mapping = object_info["class_mapping"]
-
-        all_pixel_ratios = []
-
-        for i, mask_path in tqdm(enumerate(masks), total=len(masks), desc="Calculating pixel-to-object ratio for each class"):
-            with Image.open(mask_path) as mask_image:
-                mask = np.array(mask_image)
-
-                pixels_per_class = np.zeros(num_classes)
-
-                for class_id, class_index in class_mapping.items():
-                    if background is not None and class_id == background:
-                        continue  
-
-                    pixels_per_class[class_index] = np.sum(mask == class_id)
-
-                pixel_ratios = np.zeros(num_classes)
-                for class_id, class_index in class_mapping.items():
-                    if background is not None and class_id == background:
-                        continue  
-
-                    if objects_per_class[i, class_index] > 0:
-                        pixel_ratios[class_index] = pixels_per_class[class_index] / objects_per_class[i, class_index]
-
-                all_pixel_ratios.append(pixel_ratios)
-
-        return {
-            "distributions": np.array(all_pixel_ratios),
-            "num_classes": num_classes,
-        }
     
     def save_mask_format(self, row, img_dir, label_dir):
         shutil.copy(row["img_path"], os.path.join(img_dir, os.path.basename(row["img_path"])))
@@ -155,7 +37,7 @@ class TrainingDataset():
         if os.path.exists(txt_label_path):
             shutil.copy(txt_label_path, os.path.join(label_dir, os.path.basename(txt_label_path)))
 
-    def save_json_format(self, row, img_dir, label_dir, coco_data, selected_images, selected_annotations, image_ids):
+    def save_json_format(self, row, img_dir, coco_data, selected_images, selected_annotations, image_ids):
         img_name = os.path.basename(row["img_path"])
         for img in coco_data["images"]:
             if img["file_name"] == img_name:
@@ -284,11 +166,11 @@ class TrainingDataset():
 
         print("Starting classes stratification...")
         if stratification_strategy.lower() == StratificationStrategy.PIXELS.value:
-            result = self.calculate_pixel_distribution(mask_paths, background)
+            result = calculate_pixel_distribution(mask_paths, background)
         elif stratification_strategy.lower() == StratificationStrategy.OBJECTS.value:
-            result = self.calculate_object_number(mask_paths, background)
+            result = calculate_object_number(mask_paths, background)
         else:
-            result = self.calculate_pixel_ratio(mask_paths, background)
+            result = calculate_pixel_ratio(mask_paths, background)
         
         distributions = result["distributions"]
         num_classes = result["num_classes"]
@@ -401,11 +283,11 @@ class TrainingDataset():
         print("Starting stratification...")
 
         if stratification_strategy.lower() == StratificationStrategy.PIXELS.value:
-            result = self.calculate_pixel_distribution(mask_paths, background)
+            result = calculate_pixel_distribution(mask_paths, background)
         elif stratification_strategy.lower() == StratificationStrategy.OBJECTS.value:
-            result = self.calculate_object_number(mask_paths, background)
+            result = calculate_object_number(mask_paths, background)
         else:
-            result = self.calculate_pixel_ratio(mask_paths, background)
+            result = calculate_pixel_ratio(mask_paths, background)
 
         distributions = result["distributions"]
         num_classes = result["num_classes"]

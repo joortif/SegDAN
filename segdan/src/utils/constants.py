@@ -5,6 +5,7 @@ VALID_EXTENSIONS: tuple = ('.jpg', '.jpeg', '.png', '.bmp', '.tiff')
 class StratificationStrategy(Enum):
     PIXELS = "pixels"
     OBJECTS = "objects"
+    RATIO = "pixel_to_object_ratio"
 
 class Framework(Enum):
     HUGGINGFACE = "huggingface"
@@ -22,6 +23,8 @@ class LabelFormat(Enum):
     MASK = "mask"
     JSON = "json"
     TXT = "txt"
+    COLOR = "color"
+    BINARY = "binary"
 
 class SegmentationType(Enum):
     INSTANCE = "instance"

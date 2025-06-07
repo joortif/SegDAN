@@ -2,17 +2,20 @@ from src.extensions.extensions import LabelExtensions
 from src.models.depthestimator import DepthEstimator
 from src.utils.utils import Utils
 from src.utils.imagelabelutils import ImageLabelUtils
-from src.transformers.transformer import Transformer
+from src.converters.converter import Converter
 
 import cv2
 import os 
 import numpy as np
 from tqdm import tqdm
 
-class YOLOToMultilabelTransformer(Transformer):
+class YOLOToMultilabelConverter(Converter):
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, input_data: str, output_dir: str, img_dir: str, background: int | None, depth_model: str ="Intel/dpt-swinv2-tiny-256"):
+        super().__init__(input_data, output_dir)
+        self.img_dir = img_dir
+        self.fill_background = background
+        self.depth_model = depth_model
         
     def _read_yolo(self, yolo_path: str):
             annotations = []
@@ -25,27 +28,27 @@ class YOLOToMultilabelTransformer(Transformer):
 
             return annotations
 
-    def transform(self, input_data: str, output_dir: str, img_dir: str, fill_background: int | None, depth_model: str ="Intel/dpt-swinv2-tiny-256"):
+    def convert(self):
         
-        os.makedirs(output_dir, exist_ok=True)
+        os.makedirs(self.output_dir, exist_ok=True)
 
         converted_masks = []
-        labels = os.listdir(input_data)
+        labels = os.listdir(self.input_data)
         device = Utils.get_device(self.logger)
-        depth_estimator = DepthEstimator(depth_model, device)
+        depth_estimator = DepthEstimator(self.depth_model, device)
 
         for label_name in tqdm(labels, desc="Converting labels from TXT YOLO format to multilabel..."):
 
-            label_path = os.path.join(input_data, label_name)
+            label_path = os.path.join(self.input_data, label_name)
 
             objects = self._read_yolo(label_path)
 
-            image_path = ImageLabelUtils.label_to_image(label_path, img_dir, LabelExtensions.JPG.value)
+            image_path = ImageLabelUtils.label_to_image(label_path, self.img_dir, LabelExtensions.JPG.value)
 
             depth_map = depth_estimator.generate_depth_map(image_path)
 
             h, w = depth_map.shape
-            mask = self._create_empty_mask(h, w, fill_background)
+            mask = self._create_empty_mask(h, w, self.fill_background)
 
             object_depths = []
 
@@ -69,6 +72,6 @@ class YOLOToMultilabelTransformer(Transformer):
 
             converted_masks.append(mask)
 
-            ImageLabelUtils.save_multilabel_mask(mask, label_name, output_dir)
+            ImageLabelUtils.save_multilabel_mask(mask, label_name, self.output_dir)
             
         return converted_masks

@@ -2,37 +2,41 @@ import pytorch_lightning as pl
 import segmentation_models_pytorch as smp
 import torch
 from torch.optim import lr_scheduler
-from torch.optim.lr_scheduler import LRScheduler
 import time
-import pandas as pd
-import os
+import numpy as np
 
-class SMPModel(pl.LightningModule):
-    def __init__(self, in_channels:int , out_classes: int, metrics, t_max, ignore_index=255, model_name="unet", encoder_name="resnet34", **kwargs):
+from src.metrics.compute_metrics import compute_metrics, save_metrics_smp
+from src.models.semanticsegmentationmodel import SemanticSegmentationModel
+
+class SMPModel(pl.LightningModule, SemanticSegmentationModel):
+    def __init__(self, in_channels: int , out_classes: int, metrics: np.ndarray, epochs:int, t_max: int, ignore_index: int=255, 
+                 model_name: str="unet", encoder_name: str="resnet34", **kwargs):
+        
+        pl.LightningModule.__init__(self)
+
+        SemanticSegmentationModel.__init__(self, out_classes, epochs, metrics, ignore_index, model_name, encoder_name)
         super().__init__()
         self.model_name = model_name.replace("-", "")
-        self.encoder_name = encoder_name
+        self.in_channels = in_channels
 
         self.model = smp.create_model(
             self.model_name,
-            encoder_name=self.encoder_name,
-            in_channels=in_channels,
-            classes=out_classes,
+            encoder_name=self.model_size,
+            in_channels=self.in_channels,
+            classes=self.out_classes,
             **kwargs,
         )
 
-        self.evaluation_metrics = metrics
-        self.ignore_index = ignore_index
         self.t_max = t_max
-
+        
         # Preprocessing parameters for image normalization
-        params = smp.encoders.get_preprocessing_params(encoder_name)
+        params = smp.encoders.get_preprocessing_params(self.model_size)
         self.number_of_classes = out_classes
         self.binary = out_classes == 1
         self.register_buffer("std", torch.tensor(params["std"]).view(1, 3, 1, 1))
         self.register_buffer("mean", torch.tensor(params["mean"]).view(1, 3, 1, 1))
 
-        if out_classes > 1:
+        if self.out_classes > 1:
             self.loss_mode = smp.losses.MULTICLASS_MODE
         else:
             self.loss_mode = smp.losses.BINARY_MODE
@@ -87,8 +91,6 @@ class SMPModel(pl.LightningModule):
             prob_mask = logits_mask.softmax(dim=1)
             pred_mask = prob_mask.argmax(dim=1)
 
- 
-        # Compute true positives, false positives, false negatives, and true negatives
         if self.binary:
             metric_args = {"mode": "binary"}
         else:
@@ -96,10 +98,6 @@ class SMPModel(pl.LightningModule):
 
         if self.ignore_index is not None:
             metric_args["ignore_index"] = self.ignore_index
-
-        print(logits_mask.shape)
-        print(pred_mask.shape)
-        print(mask.shape)
 
         tp, fp, fn, tn = smp.metrics.get_stats(pred_mask.long(), mask.long(), **metric_args)
                 
@@ -112,36 +110,11 @@ class SMPModel(pl.LightningModule):
         }
 
     def shared_epoch_end(self, outputs, stage):
-        # Aggregate step metrics
-        tp = torch.cat([x["tp"] for x in outputs])
-        fp = torch.cat([x["fp"] for x in outputs])
-        fn = torch.cat([x["fn"] for x in outputs])
-        tn = torch.cat([x["tn"] for x in outputs])
+        results = compute_metrics(outputs, self.metrics, stage)
 
+        self.log_dict(results, prog_bar=True)
 
-
-        dataset_iou = smp.metrics.iou_score(tp, fp, fn, tn, reduction="micro")
-        iou_per_class = smp.metrics.iou_score(tp, fp, fn, tn, reduction="none")
-        dataset_accuracy = smp.metrics.accuracy(tp, fp, fn, tn, reduction="micro")
-        dataset_precision = smp.metrics.precision(tp, fp, fn, tn, reduction="micro")
-        dataset_recall = smp.metrics.recall(tp, fp, fn, tn, reduction="micro")
-        dataset_f1_score = smp.metrics.f1_score(tp, fp, fn, tn, reduction="micro")
-
-        metrics = {
-            f"{stage}_dataset_accuracy": dataset_accuracy,
-            f"{stage}_dataset_precision": dataset_precision,
-            f"{stage}_dataset_recall": dataset_recall,
-            f"{stage}_dataset_f1_score": dataset_f1_score,
-            f"{stage}_dataset_iou": dataset_iou,
-        }
-        
-        for class_idx, iou in enumerate(torch.mean(iou_per_class, dim=0)):
-            metrics[f"{stage}_class_{class_idx}_iou"] = iou.item()
-
-
-        self.log_dict(metrics, prog_bar=True)
-
-    def training_step(self, batch, batch_idx):
+    def training_step(self, batch):
         train_loss_info = self.shared_step(batch, "train")
         self.training_step_outputs.append(train_loss_info)
         return train_loss_info
@@ -150,7 +123,7 @@ class SMPModel(pl.LightningModule):
         self.shared_epoch_end(self.training_step_outputs, "train")
         self.training_step_outputs.clear()
 
-    def validation_step(self, batch, batch_idx):
+    def validation_step(self, batch):
         valid_loss_info = self.shared_step(batch, "valid")
         self.validation_step_outputs.append(valid_loss_info)
         return valid_loss_info
@@ -159,7 +132,7 @@ class SMPModel(pl.LightningModule):
         self.shared_epoch_end(self.validation_step_outputs, "valid")
         self.validation_step_outputs.clear()
 
-    def test_step(self, batch, batch_idx):
+    def test_step(self, batch):
         test_loss_info = self.shared_step(batch, "test")
         self.test_step_outputs.append(test_loss_info)
         return test_loss_info
@@ -188,36 +161,8 @@ class SMPModel(pl.LightningModule):
         torch.save(self.model, path)
         print(f"Complete model saved in {path}")
 
-    def save_metrics(self, trainer, model,dataloader,experiment_name,filename="metrics.csv", mode="test",training_time=None):
-        if mode == "valid":
-            metrics = trainer.validate(model, dataloaders=dataloader, verbose=False)
-        elif mode == "test":
-            metrics = trainer.test(model, dataloaders=dataloader, verbose=False)
-        else:
-            raise ValueError("Mode must be 'valid' or 'test'.")
-
-        if not metrics:
-            print("No metrics to save.")
-            return metrics
-
-        df = pd.DataFrame(metrics)
-        df.insert(0, "Experiment", experiment_name)
-
-        if training_time is not None:
-            df["Training Time (min)"] = round(training_time / 60.0, 2)
-
-        if os.path.exists(filename):
-            df_existing = pd.read_csv(filename, sep=';')
-            df_combined = pd.concat([df_existing, df], ignore_index=True)
-        else:
-            df_combined = df
-
-        df_combined.to_csv(filename, sep=';', index=False)
-        print(f"Métricas guardadas en {filename}")
-        return metrics
-
-    def train(self, epochs, train_loader, valid_loader, test_loader, output_metrics_path):
-        trainer = pl.Trainer(max_epochs=epochs, log_every_n_steps=1)
+    def train(self, train_loader, valid_loader, test_loader, output_metrics_path):
+        trainer = pl.Trainer(max_epochs=self.epochs, log_every_n_steps=1)
         start_time = time.time()
         trainer.fit(self, train_dataloaders=train_loader, val_dataloaders=valid_loader)
         end_time = time.time()
@@ -228,5 +173,4 @@ class SMPModel(pl.LightningModule):
             valid_metrics = trainer.validate(self, dataloaders=valid_loader, verbose=False)
             print(valid_metrics)
 
-        # Evaluación en test y guardar métricas 
-        test_metrics = self.save_metrics(trainer, self, test_loader, f"{self.model_name} - {self.encoder_name}", output_metrics_path, mode="test", training_time=total_time)
+        save_metrics_smp(trainer, self, test_loader, f"{self.model_name} - {self.model_size}", output_metrics_path, mode="test", training_time=total_time)
