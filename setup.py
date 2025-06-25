@@ -78,7 +78,7 @@ if sys.platform in ['win32', 'cygwin', 'windows']:
 setup(
     name = 'segdan',
 
-    version = '0.1.4',
+    version = '0.1.5',
 
     author = 'Joaquin Ortiz de Murua Ferrero',
     author_email = 'joortif@unirioja.es',
