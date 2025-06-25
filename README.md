@@ -20,7 +20,7 @@ Subsequently, several segmentation models are trained and compared using differe
 
 Finally, from that comparison, the best model is selected and provided to the user. 
 
-![Architecture of the framework](./assets/architecture.png)
+![Architecture of the framework](./segdan/assets/arquitecture.png)
 
 ## Compatible models
 
