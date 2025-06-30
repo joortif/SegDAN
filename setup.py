@@ -78,7 +78,7 @@ if sys.platform in ['win32', 'cygwin', 'windows']:
 setup(
     name = 'segdan',
 
-    version = '0.1.0',
+    version = '0.1.2',
 
     author = 'Joaquin Ortiz de Murua Ferrero',
     author_email = 'joortif@unirioja.es',
@@ -96,6 +96,7 @@ setup(
 
     packages = find_packages(exclude=["test"]), 
     install_requires = install_reqs,
+    python_requires='>=3.9',
     include_package_data=True, 
 
     classifiers=[
