@@ -83,7 +83,7 @@ class TrainingDataset():
                     df.progress_apply(lambda row: handler(row, img_dir, label_dir), axis=1)
                     continue  
                     
-            with open(self.original_label_path, "r") as f:
+            with open(self.original_label_path) as f:
                 coco_data = json.load(f)
 
             selected_images = []

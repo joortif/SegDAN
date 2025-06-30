@@ -19,4 +19,3 @@ class ClusteringFactory():
         
         return models_map[model_name]()
     
-    

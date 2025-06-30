@@ -1,4 +1,5 @@
 import os
+from typing import Optional
 import cv2
 import numpy as np
 from PIL import Image
@@ -116,7 +117,7 @@ class ImageLabelUtils:
         return True
     
     @staticmethod
-    def get_classes_from_csv(csv_file, background: int |None=None):
+    def get_classes_from_csv(csv_file, background: Optional[int]=None):
         df = pd.read_csv(csv_file, delimiter=";")
 
         class_names_dict = {i: str(class_name) for i, class_name in enumerate(df["Class name"].values)}

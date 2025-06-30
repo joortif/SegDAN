@@ -464,4 +464,3 @@ class ClusteringModelForm():
         self.top.destroy()
         tk.messagebox.showinfo("Delete model", f"Model {deleted_model} has been successfully deleted from the configuration.")
 
-        

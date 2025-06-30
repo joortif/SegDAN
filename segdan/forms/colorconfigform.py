@@ -104,7 +104,7 @@ class ColorConfigForm():
         
 
     def rgb_to_hex(self, rgb):
-        return '#{:02x}{:02x}{:02x}'.format(rgb[0], rgb[1], rgb[2])
+        return f'#{rgb[0]:02x}{rgb[1]:02x}{rgb[2]:02x}'
 
     def hex_to_rgb(self, hex_color):
         hex_color = hex_color.lstrip('#')  

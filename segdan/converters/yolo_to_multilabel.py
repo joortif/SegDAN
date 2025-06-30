@@ -1,3 +1,4 @@
+from typing import Optional
 from segdan.extensions.extensions import LabelExtensions
 from segdan.models.depthestimator import DepthEstimator
 from segdan.utils.utils import Utils
@@ -11,7 +12,7 @@ from tqdm import tqdm
 
 class YOLOToMultilabelConverter(Converter):
 
-    def __init__(self, input_data: str, output_dir: str, img_dir: str, background: int | None, depth_model: str ="Intel/dpt-swinv2-tiny-256"):
+    def __init__(self, input_data: str, output_dir: str, img_dir: str, background: Optional[int], depth_model: str ="Intel/dpt-swinv2-tiny-256"):
         super().__init__(input_data, output_dir)
         self.img_dir = img_dir
         self.fill_background = background
@@ -19,7 +20,7 @@ class YOLOToMultilabelConverter(Converter):
         
     def _read_yolo(self, yolo_path: str):
             annotations = []
-            with open(yolo_path, 'r') as f:
+            with open(yolo_path) as f:
                 for line in f:
                     values = line.strip().split()
                     class_id = int(values[0])

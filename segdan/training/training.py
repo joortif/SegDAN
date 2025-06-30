@@ -1,4 +1,5 @@
-import os 
+import os
+from typing import Optional 
 import numpy as np
 
 from segdan.utils.constants import SegmentationType
@@ -17,7 +18,7 @@ from segdan.datasets.augments import get_training_augmentation, get_validation_a
 smp_models_lower = [name.lower() for name in ConfigHandler.SEMANTIC_SEGMENTATION_MODELS["smp"]]
 hf_models_lower = [name.lower() for name in ConfigHandler.SEMANTIC_SEGMENTATION_MODELS["hf"]]
 
-def model_training(model_data: dict, general_data:dict, split_path: str, model_output_path: str, label_path: str, hold_out: bool, classes: int | None):
+def model_training(model_data: dict, general_data:dict, split_path: str, model_output_path: str, label_path: str, hold_out: bool, classes: Optional[int]):
 
     epochs = model_data["epochs"]
     batch_size = model_data["batch_size"]
@@ -74,7 +75,7 @@ def get_data_splits(split_path: str, hold_out: bool, classes: int):
                 "test": None
             }
 
-def semantic_model_training(epochs: int, batch_size:int, evaluation_metrics: np.ndarray, selection_metric:str, models: np.ndarray, split_path: str, hold_out: bool, classes: int, background: int | None, output_path: str):
+def semantic_model_training(epochs: int, batch_size:int, evaluation_metrics: np.ndarray, selection_metric:str, models: np.ndarray, split_path: str, hold_out: bool, classes: int, background: Optional[int], output_path: str):
 
     best_metric = -float("inf")
     best_model_path = None

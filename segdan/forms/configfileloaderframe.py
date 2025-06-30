@@ -84,10 +84,10 @@ class ConfigFileLoaderFrame(ttk.Frame):
         
         try:
             if file_extension == '.json':
-                with open(file_path, 'r') as json_file:
+                with open(file_path) as json_file:
                     loaded_data = json.load(json_file)
             elif file_extension == '.yaml' or file_extension == '.yml':
-                with open(file_path, 'r') as yaml_file:
+                with open(file_path) as yaml_file:
                     loaded_data = yaml.safe_load(yaml_file)
             else:
                 messagebox.showerror("Invalid File", "Selected file is neither a JSON nor a YAML file.")

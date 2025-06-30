@@ -1,4 +1,3 @@
-
 from tkinter import ttk
 
 class IntroductionFrame(ttk.Frame):
@@ -38,4 +37,3 @@ class IntroductionFrame(ttk.Frame):
 
         
 
-    

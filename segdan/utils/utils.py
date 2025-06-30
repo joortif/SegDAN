@@ -1,4 +1,3 @@
-
 import torch
 import logging
 import cv2

@@ -1,3 +1,4 @@
+from typing import Optional
 from segdan.models.depthestimator import DepthEstimator
 from segdan.utils.imagelabelutils import ImageLabelUtils
 from segdan.utils.utils import Utils
@@ -11,7 +12,7 @@ import numpy as np
 
 class JSONToMultilabelConverter(Converter):
 
-    def __init__(self, input_data: str, output_dir: str, img_dir: str, background: int | None , depth_model: str ="Intel/dpt-swinv2-tiny-256"):
+    def __init__(self, input_data: str, output_dir: str, img_dir: str, background: Optional[int], depth_model: str ="Intel/dpt-swinv2-tiny-256"):
         super().__init__(input_data, output_dir)
 
         self.img_dir = img_dir
@@ -19,7 +20,7 @@ class JSONToMultilabelConverter(Converter):
         self.depth_model = depth_model
 
     def _read_json(self, json_path: str):
-        with open(json_path, "r", encoding="utf-8") as f:
+        with open(json_path, encoding="utf-8") as f:
             return json.load(f)
 
     def convert(self):

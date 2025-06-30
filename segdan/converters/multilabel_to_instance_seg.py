@@ -1,3 +1,4 @@
+from typing import Optional
 import numpy as np
 from skimage.measure import label, regionprops
 import os
@@ -8,7 +9,7 @@ from segdan.converters.converter import Converter
 
 class MultilabelToInstanceSegmentationConverter(Converter):
 
-    def __init__(self, input_data: str, output_dir: str, background: int | None = None ):
+    def __init__(self, input_data: str, output_dir: str, background: Optional[int] = None ):
         super().__init__(input_data, output_dir)
         self.background = background
 

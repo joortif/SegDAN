@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 import numpy as np
 import pandas as pd
 import os
@@ -19,7 +19,7 @@ import cv2
 if __name__ == "__main__":
 
     
-    def calculate_pixel_distribution(mask_paths, background: int | None = None):
+    def calculate_pixel_distribution(mask_paths, background: Optional[int] = None):
         all_distributions = []
         unique_classes = set()
 
@@ -57,7 +57,7 @@ if __name__ == "__main__":
             "num_classes": num_classes
         }
 
-    def calculate_object_number( masks, background: int | None = None):
+    def calculate_object_number( masks, background: Optional[int] = None):
         all_objects_per_class = []
         unique_classes = set()
 
@@ -98,7 +98,7 @@ if __name__ == "__main__":
             "class_mapping": class_mapping
         }
     
-    def calculate_pixel_ratio(masks, background: int | None = None):
+    def calculate_pixel_ratio(masks, background: Optional[int] = None):
         object_info = calculate_object_number(masks, background)
         objects_per_class = object_info["distributions"]  
         num_classes = object_info["num_classes"]
@@ -195,7 +195,7 @@ if __name__ == "__main__":
         df.to_csv(csv_path,sep=';', encoding="utf8")
         print(f"[CSV] Guardado a {csv_path}")
         
-    def calculate_class_distributions(mask_paths: List[str], num_classes: int):
+    def calculate_class_distributions(mask_paths: list[str], num_classes: int):
         class_distributions = []
         for mask_path in mask_paths:
             mask = np.array(Image.open(mask_path))

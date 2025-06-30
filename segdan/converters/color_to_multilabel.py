@@ -1,6 +1,4 @@
-from segdan.converters.converter import Converter
-from segdan.utils.imagelabelutils import ImageLabelUtils
-
+from typing import Optional
 import numpy as np
 import cv2
 import os
@@ -8,11 +6,14 @@ import random
 from tqdm import tqdm
 import matplotlib.pyplot as plt
 
+from segdan.converters.converter import Converter
+from segdan.utils.imagelabelutils import ImageLabelUtils
+
 class ColorToMultilabelConverter(Converter):
 
     num_images_mosaic = 4
 
-    def __init__(self, input_data: str, output_dir: str, color_dict: dict | None = None):
+    def __init__(self, input_data: str, output_dir: str, color_dict: Optional[dict] = None):
         super().__init__(input_data, output_dir)
         self.color_dict = color_dict
 

@@ -20,7 +20,7 @@ def save_labels_subset(image_dir, image_files, labels_dir, label_extension, outp
     return labels
 
 def reduce_JSON(file, image_files, output_path):
-    with open(file, 'r') as f:
+    with open(file) as f:
         data = json.load(f)
 
     image_id_map = {img['id']: img for img in data['images'] if img['file_name'] in image_files}

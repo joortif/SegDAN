@@ -29,4 +29,3 @@ class LabelFormat(Enum):
 class SegmentationType(Enum):
     INSTANCE = "instance"
     SEMANTIC = "semantic"
-    

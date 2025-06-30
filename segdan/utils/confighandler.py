@@ -175,7 +175,7 @@ class ConfigHandler():
         file_extension = file_path.lower().split('.')[-1]
 
         try:
-            with open(file_path, "r", encoding="utf-8") as f:
+            with open(file_path, encoding="utf-8") as f:
                 if file_extension == "yaml" or file_extension == "yml":
                     data = yaml.safe_load(f)
                 else:

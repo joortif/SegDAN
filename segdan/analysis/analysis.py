@@ -59,4 +59,3 @@ def analyze_data(general_data: dict, transformerFactory: ConverterFactory, outpu
     return 
         
 
-    

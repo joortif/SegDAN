@@ -1,10 +1,11 @@
+from typing import Optional
 import cv2
 from PIL import Image
 import numpy as np
 
 from tqdm import tqdm
 
-def calculate_pixel_distribution(mask_paths, background: int | None = None):
+def calculate_pixel_distribution(mask_paths, background: Optional[int] = None):
     all_distributions = []
     unique_classes = set()
 
@@ -42,7 +43,7 @@ def calculate_pixel_distribution(mask_paths, background: int | None = None):
         "num_classes": num_classes
     }
 
-def calculate_object_number(masks, background: int | None = None):
+def calculate_object_number(masks, background: Optional[int] = None):
     all_objects_per_class = []
     unique_classes = set()
 
@@ -83,7 +84,7 @@ def calculate_object_number(masks, background: int | None = None):
         "class_mapping": class_mapping
     }
     
-def calculate_pixel_ratio(masks, background: int | None = None):
+def calculate_pixel_ratio(masks, background: Optional[int] = None):
     object_info = calculate_object_number(masks, background)
     objects_per_class = object_info["distributions"]  
     num_classes = object_info["num_classes"]
