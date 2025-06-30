@@ -3,7 +3,7 @@ from tkinter import ttk
 from tktooltip import ToolTip
 import numpy as np
 
-from utils.confighandler import ConfigHandler
+from segdan.utils.confighandler import ConfigHandler
 
 class DatasetSplitFrame(ttk.Frame):
         

@@ -1,6 +1,6 @@
 from enum import Enum
 
-from exceptions.exceptions import ExtensionNotFoundException
+from segdan.exceptions.exceptions import ExtensionNotFoundException
 
 class LabelExtensions(Enum):
     JSON = '.json'

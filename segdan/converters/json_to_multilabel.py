@@ -1,7 +1,7 @@
-from models.depthestimator import DepthEstimator
-from utils.imagelabelutils import ImageLabelUtils
-from utils.utils import Utils
-from converters.converter import Converter
+from segdan.models.depthestimator import DepthEstimator
+from segdan.utils.imagelabelutils import ImageLabelUtils
+from segdan.utils.utils import Utils
+from segdan.converters.converter import Converter
 
 import json
 import os

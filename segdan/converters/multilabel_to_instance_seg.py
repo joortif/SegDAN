@@ -3,7 +3,7 @@ from skimage.measure import label, regionprops
 import os
 import cv2
 
-from converters.converter import Converter
+from segdan.converters.converter import Converter
 
 
 class MultilabelToInstanceSegmentationConverter(Converter):

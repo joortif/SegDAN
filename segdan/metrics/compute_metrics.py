@@ -1,7 +1,7 @@
 import torch
 
-from metrics.segmentationmetrics import accuracy, iou_score, dice_score, precision, recall, f1_score
-from metrics import custom_metric
+from segdan.metrics.segmentationmetrics import accuracy, iou_score, dice_score, precision, recall, f1_score
+from segdan.metrics import custom_metric
 
 metric_functions = {
     "accuracy": accuracy,
@@ -26,12 +26,10 @@ def compute_metrics(results, metrics, stage="train"):
         score_global = custom_metric(tp, fp, fn, tn, metric_fn, reduction="micro")
         results[f"{metric}_{stage}"] = score_global.item() if torch.is_tensor(score_global) else score_global
 
-        score_per_class = custom_metric(tp, fp, fn, tn, metric_fn, reduction="none")
-        if torch.is_tensor(score_per_class):
-            for class_idx, class_score in enumerate(score_per_class):
-                results[f"{metric}_{stage}_class_{class_idx}"] = class_score.item()
-        else:
-            for class_idx, class_score in enumerate(score_per_class):
-                results[f"{metric}_{stage}_class_{class_idx}"] = class_score
+        score_none = custom_metric(tp, fp, fn, tn, metric_fn, reduction="none")
+        score_per_class = score_none.mean(dim=0)  
+
+        for class_idx, class_score in enumerate(score_per_class):
+            results[f"{metric}_{stage}_class_{class_idx}"] = class_score.item()
 
     return results

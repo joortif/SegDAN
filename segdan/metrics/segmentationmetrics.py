@@ -18,4 +18,3 @@ def f1_score(tp, fp, fn, tn, beta=1):
     beta_fn = (beta**2) * fn
     score = beta_tp / (beta_tp + beta_fn + fp)
     return score
-

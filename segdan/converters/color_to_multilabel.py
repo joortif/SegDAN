@@ -1,5 +1,5 @@
-from converters.converter import Converter
-from utils.imagelabelutils import ImageLabelUtils
+from segdan.converters.converter import Converter
+from segdan.utils.imagelabelutils import ImageLabelUtils
 
 import numpy as np
 import cv2

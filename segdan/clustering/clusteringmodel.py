@@ -1,8 +1,8 @@
 import numpy as np
 
-from utils.utils import Utils
-from metrics.clusteringmetrics import get_scoring_function
-from utils.constants import ClusteringModelName
+from segdan.utils.utils import Utils
+from segdan.metrics.clusteringmetrics import get_scoring_function
+from segdan.utils.constants import ClusteringModelName
 
 class ClusteringModel():
 

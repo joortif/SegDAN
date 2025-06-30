@@ -3,8 +3,8 @@ from tkinter import ttk
 import copy
 
 from tktooltip import ToolTip
-from utils.constants import ClusteringModelName
-from utils.confighandler import ConfigHandler
+from segdan.utils.constants import ClusteringModelName
+from segdan.utils.confighandler import ConfigHandler
 
 class ClusteringModelForm():
     def __init__(self, parent, allow_grid=False, models=ConfigHandler.CONFIGURATION_VALUES["clustering_models"], config_data={}, edit=False):

@@ -1,5 +1,4 @@
-from datasets.traindataset import TrainingDataset
-import os
+from segdan.datasets.traindataset import TrainingDataset
 
 def dataset_split(dataset: TrainingDataset, general_data: dict, split_data: dict):
 

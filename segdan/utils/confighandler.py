@@ -2,7 +2,7 @@ import os
 import yaml
 import numpy as np
 
-from utils.constants import ClusteringModelName, Framework, SegmentationType
+from segdan.utils.constants import ClusteringModelName, Framework, SegmentationType
 
 class ConfigHandler():
     

@@ -3,10 +3,10 @@ import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 from tktooltip import ToolTip
 
-from utils.constants import LabelFormat
-from forms.colorconfigform import ColorConfigForm
-from forms.formutils import FormUtils
-from utils.confighandler import ConfigHandler
+from segdan.utils.constants import LabelFormat
+from segdan.forms.colorconfigform import ColorConfigForm
+from segdan.forms.formutils import FormUtils
+from segdan.utils.confighandler import ConfigHandler
 
 import os
 

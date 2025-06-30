@@ -1,6 +1,6 @@
-from models.semanticsegmentationmodel import SemanticSegmentationModel
-from models.hfstransformermodel import HFTransformerModel
-from models.smpmodel import SMPModel
+from segdan.models.semanticsegmentationmodel import SemanticSegmentationModel
+from segdan.models.hfstransformermodel import HFTransformerModel
+from segdan.models.smpmodel import SMPModel
 
 class SemanticSegmentationModelFactory:
 

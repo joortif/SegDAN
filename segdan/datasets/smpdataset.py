@@ -4,7 +4,7 @@ import os
 import cv2
 import numpy as np
 
-from utils.confighandler import ConfigHandler
+from segdan.utils.confighandler import ConfigHandler
 
 class SMPDataset(BaseDataset):
     

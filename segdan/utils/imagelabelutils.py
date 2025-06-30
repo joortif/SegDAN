@@ -5,8 +5,8 @@ from PIL import Image
 import pandas as pd
 from tqdm import tqdm
 
-from exceptions.exceptions import ExtensionNotFoundException
-from extensions.extensions import LabelExtensions
+from segdan.exceptions.exceptions import ExtensionNotFoundException
+from segdan.extensions.extensions import LabelExtensions
 
 class ImageLabelUtils:
 

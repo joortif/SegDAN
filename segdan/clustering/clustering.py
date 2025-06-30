@@ -1,6 +1,6 @@
-from clustering.clusteringmodel import ClusteringModel
-from clustering.clusteringfactory import ClusteringFactory
-from clustering.embeddingfactory import EmbeddingFactory
+from segdan.clustering.clusteringmodel import ClusteringModel
+from segdan.clustering.clusteringfactory import ClusteringFactory
+from segdan.clustering.embeddingfactory import EmbeddingFactory
 
 from imagedatasetanalyzer import ImageDataset
 import os

@@ -10,8 +10,8 @@ from sklearn.model_selection import KFold, train_test_split
 
 from sklearn.utils import shuffle
 
-from stratification.stratification_fn import calculate_object_number, calculate_pixel_ratio, calculate_pixel_distribution
-from utils.constants import StratificationStrategy
+from segdan.stratification.stratification_fn import calculate_object_number, calculate_pixel_ratio, calculate_pixel_distribution
+from segdan.utils.constants import StratificationStrategy
 
 class TrainingDataset():
 

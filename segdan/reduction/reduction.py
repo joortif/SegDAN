@@ -1,7 +1,7 @@
-from utils.constants import ClusteringModelName
-from extensions.extensions import LabelExtensions
-from utils.imagelabelutils import ImageLabelUtils
-from clustering.clusteringfactory import ClusteringFactory
+from segdan.utils.constants import ClusteringModelName
+from segdan.extensions.extensions import LabelExtensions
+from segdan.utils.imagelabelutils import ImageLabelUtils
+from segdan.clustering.clusteringfactory import ClusteringFactory
 import os
 import shutil
 import json

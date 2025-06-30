@@ -4,10 +4,10 @@ import huggingface_hub
 from tktooltip import ToolTip
 import webbrowser
 
-from utils.confighandler import ConfigHandler
-from forms.formutils import FormUtils
-from forms.clusteringmodelform import ClusteringModelForm
-from utils.constants import Framework
+from segdan.utils.confighandler import ConfigHandler
+from segdan.forms.formutils import FormUtils
+from segdan.forms.clusteringmodelform import ClusteringModelForm
+from segdan.utils.constants import Framework
 
 import torchvision.models as models
 import tensorflow as tf

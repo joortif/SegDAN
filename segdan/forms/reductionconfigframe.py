@@ -2,8 +2,8 @@ import tkinter as tk
 from tkinter import ttk
 from tktooltip import ToolTip
 
-from utils.constants import ClusteringModelName
-from utils.confighandler import ConfigHandler
+from segdan.utils.constants import ClusteringModelName
+from segdan.utils.confighandler import ConfigHandler
 
 class ReductionConfigFrame(ttk.Frame):
 

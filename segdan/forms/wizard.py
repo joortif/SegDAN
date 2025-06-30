@@ -1,16 +1,16 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
 
-from forms.modelframe import ModelConfigFrame
-from forms.configfileloaderframe import ConfigFileLoaderFrame
-from forms.datasetsplitframe import DatasetSplitFrame
-from forms.reductionframe import ReductionFrame
-from forms.clusteringconfigframe import ClusteringConfigFrame
-from forms.analysisconfigframe import AnalysisConfigFrame
-from forms.clusteringframe import ClusteringFrame
-from forms.generalconfigframe import GeneralConfigFrame
-from forms.introductionframe import IntroductionFrame
-from forms.reductionconfigframe import ReductionConfigFrame
+from segdan.forms.modelframe import ModelConfigFrame
+from segdan.forms.configfileloaderframe import ConfigFileLoaderFrame
+from segdan.forms.datasetsplitframe import DatasetSplitFrame
+from segdan.forms.reductionframe import ReductionFrame
+from segdan.forms.clusteringconfigframe import ClusteringConfigFrame
+from segdan.forms.analysisconfigframe import AnalysisConfigFrame
+from segdan.forms.clusteringframe import ClusteringFrame
+from segdan.forms.generalconfigframe import GeneralConfigFrame
+from segdan.forms.introductionframe import IntroductionFrame
+from segdan.forms.reductionconfigframe import ReductionConfigFrame
 
 class Wizard(tk.Tk):
    def __init__(self, *args, **kwargs):

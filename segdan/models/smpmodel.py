@@ -7,17 +7,16 @@ import time
 import numpy as np
 import pandas as pd
 
-
-from metrics.compute_metrics import compute_metrics
-from models.semanticsegmentationmodel import SemanticSegmentationModel
+from segdan.metrics.compute_metrics import compute_metrics
+from segdan.models.semanticsegmentationmodel import SemanticSegmentationModel
 
 class SMPModel(pl.LightningModule, SemanticSegmentationModel):
-    def __init__(self, in_channels: int , out_classes: int, metrics: np.ndarray, epochs:int, t_max: int, output_path:str, ignore_index: int=255, 
+    def __init__(self, in_channels: int , out_classes: int, metrics: np.ndarray, selection_metric: str, epochs:int, t_max: int, output_path:str, ignore_index: int=255, 
                  model_name: str="unet", encoder_name: str="resnet34", **kwargs):
         
         pl.LightningModule.__init__(self)
 
-        SemanticSegmentationModel.__init__(self, out_classes, epochs, metrics, ignore_index, model_name, encoder_name, output_path)
+        SemanticSegmentationModel.__init__(self, out_classes, epochs, metrics, selection_metric, ignore_index, model_name, encoder_name, output_path)
         super().__init__()
         self.model_name = model_name.replace("-", "")
         self.in_channels = in_channels
@@ -155,14 +154,6 @@ class SMPModel(pl.LightningModule, SemanticSegmentationModel):
                 "frequency": 1,
             },
         }
-    
-    def save_weights(self, path):
-        torch.save(self.model.state_dict(), path)
-        print(f"Model weights saved in {path}")
-        
-    def save_model(self, path):
-        torch.save(self.model, path)
-        print(f"Complete model saved in {path}")
 
     def save_metrics(self,trainer, dataloader, experiment_name, filename="metrics.csv", training_time=None):
         metrics = trainer.evaluate(eval_dataset=dataloader)
@@ -184,8 +175,10 @@ class SMPModel(pl.LightningModule, SemanticSegmentationModel):
             df_combined = df
 
         df_combined.to_csv(filename, sep=';', index=False)
-        print(f"Métricas guardadas en {filename}")
-        return metrics
+        print(f"Metrics saved in file {filename}")
+
+        evaluation_metric = metrics[0].get(f"test_{self.selection_metric}")
+        return evaluation_metric
 
     def train(self, train_loader, valid_loader, test_loader):
         trainer = pl.Trainer(max_epochs=self.epochs, log_every_n_steps=1)
@@ -199,4 +192,7 @@ class SMPModel(pl.LightningModule, SemanticSegmentationModel):
             valid_metrics = trainer.validate(self, dataloaders=valid_loader, verbose=False)
             print(valid_metrics)
 
-        self.save_metrics(trainer, self, test_loader, f"{self.model_name} - {self.model_size}.csv", self.output_path, mode="test", training_time=total_time)
+        evaluation_metric = self.save_metrics(trainer, test_loader, f"{self.model_name} - {self.model_size}", f"metrics_{self.model_name}.csv", training_time=total_time)
+        model_output_path = self.save_model(self.output_path)
+
+        return evaluation_metric, model_output_path

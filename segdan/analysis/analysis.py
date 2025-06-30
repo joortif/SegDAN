@@ -1,6 +1,6 @@
-from utils.constants import LabelFormat
-from converters.converterfactory import ConverterFactory
-from utils.imagelabelutils import ImageLabelUtils
+from segdan.utils.constants import LabelFormat
+from segdan.converters.converterfactory import ConverterFactory
+from segdan.utils.imagelabelutils import ImageLabelUtils
 
 from imagedatasetanalyzer import ImageLabelDataset, ImageDataset
 import os 

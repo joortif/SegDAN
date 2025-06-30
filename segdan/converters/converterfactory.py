@@ -1,11 +1,11 @@
-from utils.constants import LabelFormat
-from converters.converter import Converter
-from converters.binary_to_multilabel import BinaryToMultilabelConverter
-from converters.color_to_multilabel import ColorToMultilabelConverter
-from converters.json_to_multilabel import JSONToMultilabelConverter
-from converters.multilabel_to_instance_seg import MultilabelToInstanceSegmentationConverter
-from converters.multilabel_to_yolo import MultilabelToYOLOConverter
-from converters.yolo_to_multilabel import YOLOToMultilabelConverter
+from segdan.utils.constants import LabelFormat
+from segdan.converters.converter import Converter
+from segdan.converters.binary_to_multilabel import BinaryToMultilabelConverter
+from segdan.converters.color_to_multilabel import ColorToMultilabelConverter
+from segdan.converters.json_to_multilabel import JSONToMultilabelConverter
+from segdan.converters.multilabel_to_instance_seg import MultilabelToInstanceSegmentationConverter
+from segdan.converters.multilabel_to_yolo import MultilabelToYOLOConverter
+from segdan.converters.yolo_to_multilabel import YOLOToMultilabelConverter
 
 
 class ConverterFactory:

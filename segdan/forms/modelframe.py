@@ -4,9 +4,9 @@ from tktooltip import ToolTip
 import json
 import yaml
 
-from utils.constants import SegmentationType
-from utils.confighandler import ConfigHandler
-from forms.formutils import FormUtils
+from segdan.utils.constants import SegmentationType
+from segdan.utils.confighandler import ConfigHandler
+from segdan.forms.formutils import FormUtils
 
 class ModelConfigFrame(ttk.Frame):
 

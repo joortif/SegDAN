@@ -1,17 +1,17 @@
 import os 
 import numpy as np
 
-from utils.constants import SegmentationType
-from models.smpmodel import SMPModel
-from models.hfstransformermodel import HFTransformerModel
+from segdan.utils.constants import SegmentationType
+from segdan.models.smpmodel import SMPModel
+from segdan.models.hfstransformermodel import HFTransformerModel
 
-from datasets.hfdataset import HuggingFaceAdapterDataset
-from datasets.smpdataset import SMPDataset
+from segdan.datasets.hfdataset import HuggingFaceAdapterDataset
+from segdan.datasets.smpdataset import SMPDataset
 from torch.utils.data import DataLoader
 
 
-from utils.confighandler import ConfigHandler
-from datasets.augments import get_training_augmentation, get_validation_augmentation
+from segdan.utils.confighandler import ConfigHandler
+from segdan.datasets.augments import get_training_augmentation, get_validation_augmentation
 
 
 smp_models_lower = [name.lower() for name in ConfigHandler.SEMANTIC_SEGMENTATION_MODELS["smp"]]
@@ -25,17 +25,14 @@ def model_training(model_data: dict, general_data:dict, split_path: str, model_o
     selection_metric = model_data["selection_metric"]
     segmentation_type = model_data["segmentation"]
     models = model_data["models"]
-
     background = general_data["background"]
     
-
     os.makedirs(model_output_path, exist_ok=True)
     
     if segmentation_type == SegmentationType.SEMANTIC.value:
         models = rename_model_sizes(models)
         semantic_model_training(epochs, batch_size, evaluation_metrics, selection_metric, models, split_path, hold_out, classes, background, model_output_path)
 
-    
     return
 
 def rename_model_sizes(models: np.ndarray):
@@ -51,7 +48,6 @@ def rename_model_sizes(models: np.ndarray):
             model["model_size"] = ConfigHandler.CONFIGURATION_VALUES["model_sizes_hf"].get(model_size)
 
     return models
-
 
 def get_data_splits(split_path: str, hold_out: bool, classes: int):
     
@@ -80,6 +76,9 @@ def get_data_splits(split_path: str, hold_out: bool, classes: int):
 
 def semantic_model_training(epochs: int, batch_size:int, evaluation_metrics: np.ndarray, selection_metric:str, models: np.ndarray, split_path: str, hold_out: bool, classes: int, background: int | None, output_path: str):
 
+    best_metric = -float("inf")
+    best_model_path = None
+
     for fold_idx, data_split in enumerate(get_data_splits(split_path, hold_out, classes)):
         train_dataset = data_split["train"]
         val_dataset = data_split["val"]
@@ -90,26 +89,36 @@ def semantic_model_training(epochs: int, batch_size:int, evaluation_metrics: np.
             model_name = model_config["model_name"]
 
             if model_name in hf_models_lower:
-                model = HFTransformerModel(model_name, model_size, classes, evaluation_metrics, selection_metric, epochs, batch_size)
+                model = HFTransformerModel(model_name, model_size, classes, evaluation_metrics, selection_metric, epochs, batch_size, output_path)
 
                 train_adapter = HuggingFaceAdapterDataset(train_dataset, model.feature_extractor)
                 val_adapter = HuggingFaceAdapterDataset(val_dataset, model.feature_extractor) if val_dataset else None
                 test_adapter = HuggingFaceAdapterDataset(test_dataset, model.feature_extractor)
 
-                model.train(train_adapter, val_adapter, test_adapter)
+                evaluation_metric, candidate_path = model.train(train_adapter, val_adapter, test_adapter)
 
             else:
                 train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=4, persistent_workers=True)
                 val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=4, persistent_workers=True) if val_dataset else None
                 test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=4, persistent_workers=True) if test_dataset else None
 
-                T_MAX = epochs * len(train_loader)
+                t_max = epochs * len(train_loader)
                 out_classes = len([cls for cls in classes if cls.lower() !="background"])
 
-                model = SMPModel(3, out_classes, evaluation_metrics, epochs, T_MAX, background, model_name, model_size)
+                model = SMPModel(3, out_classes, evaluation_metrics, selection_metric, epochs, t_max, background, model_name, model_size)
 
-                model.train(train_loader, val_loader, test_loader, os.path.join(output_path, "metrics.csv"))
+                evaluation_metric, candidate_path = model.train(train_loader, val_loader, test_loader, os.path.join(output_path, "metrics.csv"))
 
-            
+            if evaluation_metric > best_metric:
+                print(f"New best model {model_name} found with {selection_metric}={evaluation_metric}")
 
-    
+                if best_model_path and os.path.exists(best_model_path):
+                    os.remove(best_model_path)
+
+                best_metric = evaluation_metric
+                best_model_path = candidate_path
+            else:
+                if os.path.exists(candidate_path):
+                    os.remove(candidate_path)
+
+    return best_model_path  

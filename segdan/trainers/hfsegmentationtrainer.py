@@ -7,7 +7,7 @@ import numpy as np
 import segmentation_models_pytorch as smp
 
 from segdan.metrics.custom_metric import custom_metric
-from metrics.segmentationmetrics import dice_score
+from segdan.metrics.segmentationmetrics import dice_score
 
 class HFSegmentationTrainer(Trainer):
     def __init__(self, *args, num_classes=None, ignore_index=None, **kwargs):

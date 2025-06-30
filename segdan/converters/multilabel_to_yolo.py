@@ -1,5 +1,5 @@
 from ultralytics.data.converter import convert_segment_masks_to_yolo_seg
-from converters.converter import Converter
+from segdan.converters.converter import Converter
 
 class MultilabelToYOLOConverter(Converter):
 

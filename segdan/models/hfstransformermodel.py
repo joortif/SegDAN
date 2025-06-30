@@ -12,9 +12,9 @@ import numpy as np
 
 import pandas as pd
 
-from metrics.compute_metrics import compute_metrics
-from models.semanticsegmentationmodel import SemanticSegmentationModel
-from trainers.hfsegmentationtrainer import HFSegmentationTrainer
+from segdan.metrics.compute_metrics import compute_metrics
+from segdan.models.semanticsegmentationmodel import SemanticSegmentationModel
+from segdan.trainers.hfsegmentationtrainer import HFSegmentationTrainer
 
 import os
 
@@ -38,8 +38,8 @@ class HFTransformerModel(SemanticSegmentationModel):
         },
     }
 
-    def __init__(self, model_name, model_size, out_classes, metrics, epochs, batch_size, output_path, ignore_index=255):
-        super.__init__(out_classes, epochs, metrics, ignore_index, model_name, model_size), output_path
+    def __init__(self, model_name, model_size, out_classes, metrics, selection_metric, epochs, batch_size, output_path, ignore_index=255):
+        super.__init__(out_classes, epochs, metrics, selection_metric, ignore_index, model_name, model_size), output_path
         if self.model_name not in self.MODEL_CONFIGS:
             raise ValueError(f"Unsupported HuggingFace semantic segmentation model {self.model_name}. Supported models are: {list(self.MODEL_CONFIGS.keys())}")
         
@@ -180,8 +180,10 @@ class HFTransformerModel(SemanticSegmentationModel):
             df_combined = df
 
         df_combined.to_csv(filename, sep=';', index=False)
-        print(f"Metrics saved in {filename}")
-        return metrics
+        print(f"Metrics saved in file {filename}")
+
+        evaluation_metric = metrics[0].get(f"test_{self.selection_metric}")
+        return evaluation_metric
 
     def train(self, train_dataset, valid_dataset, test_dataset):
 
@@ -221,19 +223,17 @@ class HFTransformerModel(SemanticSegmentationModel):
         total_time = end_time - start_time
         print(f"Total training time: {total_time / 60:.2f} minutes")
         
-        valid_metrics = trainer.evaluate(eval_dataset=valid_dataset)
-        print(valid_metrics)
+        if valid_dataset:
+            valid_metrics = trainer.evaluate(eval_dataset=valid_dataset)
+            print(valid_metrics)
         
-        if test_dataset:
-            trainer.compute_metrics = partial(self.compute_semantic_metrics, stage="test")
-            test_metrics = self.save_metrics(trainer, test_dataset, f"{self.model_name.capitalize()} - {self.model_size.capitalize()}.csv", os.path.join(self.output_path, "metrics.csv"), 
-                                             mode="test", training_time=total_time)
+        trainer.compute_metrics = partial(self.compute_semantic_metrics, stage="test")
+        evaluation_metric = self.save_metrics(trainer, test_dataset, f"{self.model_name.capitalize()} - {self.model_size.capitalize()}.csv", os.path.join(self.output_path, "metrics.csv"), 
+                                            mode="test", training_time=total_time)
 
-        return {
-            "valid_metrics": valid_metrics,
-            "test_metrics": test_metrics,
-            "training_time_min": total_time,
-    }
+        model_output_path = self.save_model(self.output_path)
+
+        return evaluation_metric, model_output_path
         
     
 
