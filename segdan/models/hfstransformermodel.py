@@ -38,8 +38,10 @@ class HFTransformerModel(SemanticSegmentationModel):
         },
     }
 
-    def __init__(self, model_name, model_size, out_classes, metrics, selection_metric, epochs, batch_size, output_path, ignore_index=255):
-        super.__init__(out_classes, epochs, metrics, selection_metric, ignore_index, model_name, model_size), output_path
+    def __init__(self, model_name, model_size, out_classes, metrics, selection_metric, epochs, batch_size, output_path):
+        super.__init__(self, out_classes=out_classes, epochs=epochs, metrics=metrics, selection_metric=selection_metric, 
+                       model_name=model_name, model_size=encoder_name, output_path=output_path)
+        
         if self.model_name not in self.MODEL_CONFIGS:
             raise ValueError(f"Unsupported HuggingFace semantic segmentation model {self.model_name}. Supported models are: {list(self.MODEL_CONFIGS.keys())}")
         
@@ -185,7 +187,7 @@ class HFTransformerModel(SemanticSegmentationModel):
         evaluation_metric = metrics[0].get(f"test_{self.selection_metric}")
         return evaluation_metric
 
-    def train(self, train_dataset, valid_dataset, test_dataset):
+    def run_training(self, train_dataset, valid_dataset, test_dataset):
 
         training_args = TrainingArguments(
         output_dir=self.output_path,          

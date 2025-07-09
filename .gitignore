@@ -6,3 +6,6 @@ segdan/src/datasets/stratified_segementation.py
 dist/
 segdan.egg-info/
 
+build/
+.ipynb_checkpoints/
+lightning_logs/

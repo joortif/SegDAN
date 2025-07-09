@@ -51,7 +51,7 @@ class SMPDataset(BaseDataset):
         mask = cv2.imread(self.masks_fps[i], 0)
         
         # Create a blank mask to remap the class values
-        mask_remap = np.full_like(mask, 255, dtype=np.uint8)
+        mask_remap = np.full_like(mask, 255 if self.background_class is not None else 0, dtype=np.uint8)
 
         # Remap the mask according to the dynamically created class map
         for class_value, new_value in self.class_map.items():
@@ -67,9 +67,14 @@ class SMPDataset(BaseDataset):
             image, mask_remap = sample["image"], sample["mask"]
             
             unique_vals = np.unique(mask_remap)
-            assert any(val != 255 for val in unique_vals), f"Mask at index {i} became empty after augmentation: {unique_vals}"
+            assert any(val != 255 for val in unique_vals), f"Mask at index {i} became empty after augmentation."
+            
+        mask_vals = set(np.unique(mask_remap))
+        if not mask_vals.issubset(valid_values):
+            raise ValueError(f"Mask has invalid values {mask_vals - valid_values}")
 
         image = image.transpose(2, 0, 1)
+        
         return image, mask_remap
 
     def __len__(self):
