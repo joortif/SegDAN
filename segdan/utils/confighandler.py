@@ -28,6 +28,8 @@ class ConfigHandler():
     ]
 
     VALID_IMAGE_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.bmp', '.tiff'}
+    
+    VALID_ANNOTATION_EXTENSIONS = {'.json', '.txt'}.union(VALID_IMAGE_EXTENSIONS)
 
     SEMANTIC_SEGMENTATION_MODELS = {
         "smp": ["U-Net", "DeepLabV3", "Segformer", "FPN", "PSPNet"],

@@ -18,7 +18,7 @@ from segdan.datasets.augments import get_training_augmentation, get_validation_a
 smp_models_lower = [name.lower() for name in ConfigHandler.SEMANTIC_SEGMENTATION_MODELS["smp"]]
 hf_models_lower = [name.lower() for name in ConfigHandler.SEMANTIC_SEGMENTATION_MODELS["hf"]]
 
-def model_training(model_data: dict, general_data:dict, split_path: str, model_output_path: str, label_path: str, hold_out: bool, classes: Optional[int]):
+def model_training(model_data: dict, general_data:dict, split_path: str, model_output_path: str, label_path: str, hold_out: bool, classes: Optional[np.ndarray]):
 
     epochs = model_data["epochs"]
     batch_size = model_data["batch_size"]
@@ -27,6 +27,7 @@ def model_training(model_data: dict, general_data:dict, split_path: str, model_o
     segmentation_type = model_data["segmentation"]
     models = model_data["models"]
     background = general_data["background"]
+
     
     os.makedirs(model_output_path, exist_ok=True)
     
@@ -50,7 +51,7 @@ def rename_model_sizes(models: np.ndarray):
 
     return models
 
-def get_data_splits(split_path: str, hold_out: bool, classes: int):
+def get_data_splits(split_path: str, hold_out: bool, classes: np.ndarray, background: Optional[int]):
     
     if hold_out:
         train_path = os.path.join(split_path, "train") 
@@ -58,9 +59,9 @@ def get_data_splits(split_path: str, hold_out: bool, classes: int):
         test_path = os.path.join(split_path, "test")
 
         yield {
-            "train": SMPDataset(os.path.join(train_path, "images"), os.path.join(train_path, "labels"), classes, get_training_augmentation()),
-            "val": SMPDataset(os.path.join(val_path, "images"), os.path.join(val_path, "labels"), classes, get_training_augmentation()) if val_path else None,
-            "test": SMPDataset(os.path.join(test_path, "images"), os.path.join(test_path, "labels"), classes, get_validation_augmentation())
+            "train": SMPDataset(os.path.join(train_path, "images"), os.path.join(train_path, "labels"), classes, get_training_augmentation(), background),
+            "val": SMPDataset(os.path.join(val_path, "images"), os.path.join(val_path, "labels"), classes, get_training_augmentation(), background) if val_path else None,
+            "test": SMPDataset(os.path.join(test_path, "images"), os.path.join(test_path, "labels"), classes, get_validation_augmentation(), background)
         }
     else:
         fold_dirs = sorted([f for f in os.listdir(split_path) if f.startswith("fold_")])
@@ -70,17 +71,18 @@ def get_data_splits(split_path: str, hold_out: bool, classes: int):
             val_path = os.path.join(fold_path, "val")
 
             yield {
-                "train": SMPDataset(os.path.join(train_path, "images"), os.path.join(train_path, "labels"), classes, get_training_augmentation()),
-                "val": SMPDataset(os.path.join(val_path, "images"), os.path.join(val_path, "labels"), classes, get_validation_augmentation()),
+                "train": SMPDataset(os.path.join(train_path, "images"), os.path.join(train_path, "labels"), classes, get_training_augmentation(), background),
+                "val": SMPDataset(os.path.join(val_path, "images"), os.path.join(val_path, "labels"), classes, get_validation_augmentation(), background),
                 "test": None
             }
 
-def semantic_model_training(epochs: int, batch_size:int, evaluation_metrics: np.ndarray, selection_metric:str, models: np.ndarray, split_path: str, hold_out: bool, classes: int, background: Optional[int], output_path: str):
+def semantic_model_training(epochs: int, batch_size:int, evaluation_metrics: np.ndarray, selection_metric:str, models: np.ndarray, split_path: str, hold_out: bool, classes: np.ndarray, background: Optional[int], output_path: str):
 
     best_metric = -float("inf")
     best_model_path = None
+    best_model_name = None
 
-    for fold_idx, data_split in enumerate(get_data_splits(split_path, hold_out, classes)):
+    for fold_idx, data_split in enumerate(get_data_splits(split_path, hold_out, classes, background)):
         train_dataset = data_split["train"]
         val_dataset = data_split["val"]
         test_dataset = data_split["test"]
@@ -92,35 +94,37 @@ def semantic_model_training(epochs: int, batch_size:int, evaluation_metrics: np.
             if model_name in hf_models_lower:
                 model = HFTransformerModel(model_name, model_size, classes, evaluation_metrics, selection_metric, epochs, batch_size, output_path)
 
-                train_adapter = HuggingFaceAdapterDataset(train_dataset, model.feature_extractor)
-                val_adapter = HuggingFaceAdapterDataset(val_dataset, model.feature_extractor) if val_dataset else None
-                test_adapter = HuggingFaceAdapterDataset(test_dataset, model.feature_extractor)
-
-                evaluation_metric, candidate_path = model.train(train_adapter, val_adapter, test_adapter)
-
+                train_loader = HuggingFaceAdapterDataset(train_dataset, model.feature_extractor)
+                val_loader = HuggingFaceAdapterDataset(val_dataset, model.feature_extractor) if val_dataset else None
+                test_loader = HuggingFaceAdapterDataset(test_dataset, model.feature_extractor)
             else:
                 train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=4, persistent_workers=True)
                 val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=4, persistent_workers=True) if val_dataset else None
-                test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=4, persistent_workers=True) if test_dataset else None
+                test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=4, persistent_workers=True)
 
                 t_max = epochs * len(train_loader)
-                out_classes = len([cls for cls in classes if cls.lower() !="background"])
 
-                model = SMPModel(in_channels=3, out_classes=out_classes, metrics=evaluation_metrics, selection_metric=selection_metric, epochs=epochs, t_max=t_max, output_path=output_path, 
-                                 ignore_index=background, model_name=model_name, encoder_name=model_size)
-
-                evaluation_metric, candidate_path = model.train(train_loader, val_loader, test_loader)
+                model = SMPModel(in_channels=3, classes=classes, metrics=evaluation_metrics, selection_metric=selection_metric, epochs=epochs, t_max=t_max, output_path=output_path, model_name=model_name, encoder_name=model_size)
+                
+                
+            print(f"Training {model_name} - {model_size}...")
+                
+            evaluation_metric, candidate_path = model.run_training(train_loader, val_loader, test_loader)
 
             if evaluation_metric > best_metric:
-                print(f"New best model {model_name} found with {selection_metric}={evaluation_metric}")
+                print(f"New best model found: {model_name} with {selection_metric} score of {evaluation_metric}")
 
                 if best_model_path and os.path.exists(best_model_path):
                     os.remove(best_model_path)
 
+                best_model_name = model_name
                 best_metric = evaluation_metric
                 best_model_path = candidate_path
             else:
                 if os.path.exists(candidate_path):
                     os.remove(candidate_path)
+                    
+            print(f"Best model: {best_model_name}")
+            print(f"{selection_metric.capitalize()} score: {best_metric}")
 
     return best_model_path  

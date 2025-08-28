@@ -12,6 +12,7 @@ from sklearn.utils import shuffle
 
 from segdan.stratification.stratification_fn import calculate_object_number, calculate_pixel_ratio, calculate_pixel_distribution
 from segdan.utils.constants import StratificationStrategy
+from segdan.utils.confighandler import ConfigHandler
 
 class TrainingDataset():
 
@@ -22,7 +23,7 @@ class TrainingDataset():
         self.label_format = label_format
         self.original_label_path = original_label_path
 
-        self.image_files = sorted([os.path.join(img_path, f) for f in os.listdir(img_path) if f.lower().endswith(('.jpg', '.jpeg', '.png', '.bmp', '.tiff'))])
+        self.image_files = sorted([os.path.join(img_path, f) for f in os.listdir(img_path) if f.lower().endswith(tuple(ConfigHandler.VALID_IMAGE_EXTENSIONS))])
         
         self.mask_paths_multilabel = sorted([os.path.join(multilabel_label_path, f) for f in os.listdir(multilabel_label_path) if f.endswith('.png')])
     

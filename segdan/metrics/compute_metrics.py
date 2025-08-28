@@ -1,7 +1,8 @@
 import torch
+import re
 
 from segdan.metrics.segmentationmetrics import accuracy, iou_score, dice_score, precision, recall, f1_score
-from segdan.metrics import custom_metric
+from segdan.metrics.custom_metric import custom_metric
 
 metric_functions = {
     "accuracy": accuracy,
@@ -12,7 +13,7 @@ metric_functions = {
     "f1": f1_score,
 }
 
-def compute_metrics(results, metrics, stage="train"):
+def compute_metrics(results, metrics, classes, stage="train"):
     tp = torch.cat([x["tp"] for x in results])
     fp = torch.cat([x["fp"] for x in results])
     fn = torch.cat([x["fn"] for x in results])
@@ -30,6 +31,7 @@ def compute_metrics(results, metrics, stage="train"):
         score_per_class = score_none.mean(dim=0)  
 
         for class_idx, class_score in enumerate(score_per_class):
-            results[f"{metric}_{stage}_class_{class_idx}"] = class_score.item()
+            class_name = classes[class_idx]
+            results[f"{metric}_{stage}_class_{class_name}"] = class_score.item()
 
     return results
