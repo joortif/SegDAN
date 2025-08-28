@@ -27,10 +27,16 @@ def _analyze_and_save_results(dataset: ImageDataset, output_path: str, verbose: 
     analysis_result_path = os.path.join(output_path, "analysis")
     os.makedirs(analysis_result_path, exist_ok=True)
 
-    print("Starting dataset analysis...")
-    dataset.analyze(output=analysis_result_path, verbose=verbose)
+    print("Calculating image sizes...")
+    height_mode, width_mode = dataset.image_sizes()
+
+    if dataset.label_dir is not None:
+        print("Starting dataset analysis...")
+        dataset.analyze(output=analysis_result_path, verbose=verbose)
 
     print(f"Dataset analysis ended successfully. Results saved in {analysis_result_path}")
+
+    return height_mode, width_mode
 
 def analyze_data(general_data: dict, transformerFactory: ConverterFactory, output_path:str, class_map: dict,  verbose: bool):
 
@@ -42,7 +48,7 @@ def analyze_data(general_data: dict, transformerFactory: ConverterFactory, outpu
 
     if label_path is None:
         dataset = ImageDataset(image_path)
-        _analyze_and_save_results(dataset, output_path, verbose)
+        height_mode, width_mode = _analyze_and_save_results(dataset, output_path, verbose)
         return 
 
     if label_format == LabelFormat.MASK.value:
@@ -55,7 +61,4 @@ def analyze_data(general_data: dict, transformerFactory: ConverterFactory, outpu
         label_path = convert_to_mask(label_path, image_path, label_format, general_data, output_path, transformerFactory)
 
     dataset = ImageLabelDataset(image_path, label_path, background=background, class_map=class_map)
-    _analyze_and_save_results(dataset, output_path, verbose)
-    return 
-        
-
+    return _analyze_and_save_results(dataset, output_path, verbose)

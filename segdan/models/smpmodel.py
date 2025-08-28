@@ -14,15 +14,17 @@ class SMPModel(pl.LightningModule, SemanticSegmentationModel):
     def __init__(self, in_channels: int , out_classes: int, metrics: np.ndarray, selection_metric: str, epochs:int, t_max: int, output_path:str, ignore_index: int=255, 
                  model_name: str="unet", encoder_name: str="resnet34", **kwargs):
         
-        pl.LightningModule.__init__(self)
-
-        SemanticSegmentationModel.__init__(self, out_classes, epochs, metrics, selection_metric, ignore_index, model_name, encoder_name, output_path)
         super().__init__()
+
+        SemanticSegmentationModel.__init__(self, out_classes=out_classes, epochs=epochs, metrics=metrics, 
+                                           selection_metric=selection_metric, ignore_index=ignore_index, 
+                                           model_name=model_name, model_size=encoder_name, output_path=output_path)
         self.model_name = model_name.replace("-", "")
         self.in_channels = in_channels
 
+
         self.model = smp.create_model(
-            self.model_name,
+            arch=self.model_name,
             encoder_name=self.model_size,
             in_channels=self.in_channels,
             classes=self.out_classes,
@@ -38,10 +40,10 @@ class SMPModel(pl.LightningModule, SemanticSegmentationModel):
         self.register_buffer("std", torch.tensor(params["std"]).view(1, 3, 1, 1))
         self.register_buffer("mean", torch.tensor(params["mean"]).view(1, 3, 1, 1))
 
-        if self.out_classes > 1:
-            self.loss_mode = smp.losses.MULTICLASS_MODE
-        else:
+        if self.binary:
             self.loss_mode = smp.losses.BINARY_MODE
+        else:
+            self.loss_mode = smp.losses.MULTICLASS_MODE
 
         self.loss_fn = smp.losses.DiceLoss(self.loss_mode, from_logits=True, ignore_index=self.ignore_index)
 

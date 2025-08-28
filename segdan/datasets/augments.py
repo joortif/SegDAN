@@ -2,7 +2,7 @@ import albumentations as A
 
 def get_training_augmentation(resize_height = 512, resize_width=512):
     train_transform = [
-        A.Resize(height=resize_height, width=resize_width),
+        A.Resize(height=resize_height, width=resize_width, antialias=True),
         A.HorizontalFlip(p=0.5),
         A.ShiftScaleRotate(
             scale_limit=0.5, rotate_limit=0, shift_limit=0.1, p=1, fill=0, fill_mask=255, border_mode=0
@@ -40,7 +40,7 @@ def get_training_augmentation(resize_height = 512, resize_width=512):
 
 def get_validation_augmentation(resize_height = 512, resize_width=512):
     test_transform = [
-       A.Resize(height=resize_height, width=resize_width),
+       A.Resize(height=resize_height, width=resize_width, antialias=True),
        A.PadIfNeeded(min_height=None, min_width=None, pad_height_divisor=32, pad_width_divisor=32, fill=0, fill_mask=255)
     ]
     return A.Compose(test_transform)

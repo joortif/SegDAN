@@ -58,9 +58,9 @@ def get_data_splits(split_path: str, hold_out: bool, classes: int):
         test_path = os.path.join(split_path, "test")
 
         yield {
-            "train": SMPDataset(os.path.join(train_path, "images"), os.path.join(train_path, "labels"), classes, get_training_augmentation),
-            "val": SMPDataset(os.path.join(val_path, "images"), os.path.join(val_path, "labels"), classes, get_training_augmentation) if val_path else None,
-            "test": SMPDataset(os.path.join(test_path, "images"), os.path.join(test_path, "labels"), classes, get_validation_augmentation)
+            "train": SMPDataset(os.path.join(train_path, "images"), os.path.join(train_path, "labels"), classes, get_training_augmentation()),
+            "val": SMPDataset(os.path.join(val_path, "images"), os.path.join(val_path, "labels"), classes, get_training_augmentation()) if val_path else None,
+            "test": SMPDataset(os.path.join(test_path, "images"), os.path.join(test_path, "labels"), classes, get_validation_augmentation())
         }
     else:
         fold_dirs = sorted([f for f in os.listdir(split_path) if f.startswith("fold_")])
@@ -70,8 +70,8 @@ def get_data_splits(split_path: str, hold_out: bool, classes: int):
             val_path = os.path.join(fold_path, "val")
 
             yield {
-                "train": SMPDataset(os.path.join(train_path, "images"), os.path.join(train_path, "labels"), classes, get_training_augmentation),
-                "val": SMPDataset(os.path.join(val_path, "images"), os.path.join(val_path, "labels"), classes, get_validation_augmentation),
+                "train": SMPDataset(os.path.join(train_path, "images"), os.path.join(train_path, "labels"), classes, get_training_augmentation()),
+                "val": SMPDataset(os.path.join(val_path, "images"), os.path.join(val_path, "labels"), classes, get_validation_augmentation()),
                 "test": None
             }
 
@@ -106,9 +106,10 @@ def semantic_model_training(epochs: int, batch_size:int, evaluation_metrics: np.
                 t_max = epochs * len(train_loader)
                 out_classes = len([cls for cls in classes if cls.lower() !="background"])
 
-                model = SMPModel(3, out_classes, evaluation_metrics, selection_metric, epochs, t_max, background, model_name, model_size)
+                model = SMPModel(in_channels=3, out_classes=out_classes, metrics=evaluation_metrics, selection_metric=selection_metric, epochs=epochs, t_max=t_max, output_path=output_path, 
+                                 ignore_index=background, model_name=model_name, encoder_name=model_size)
 
-                evaluation_metric, candidate_path = model.train(train_loader, val_loader, test_loader, os.path.join(output_path, "metrics.csv"))
+                evaluation_metric, candidate_path = model.train(train_loader, val_loader, test_loader)
 
             if evaluation_metric > best_metric:
                 print(f"New best model {model_name} found with {selection_metric}={evaluation_metric}")

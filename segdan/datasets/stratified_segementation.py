@@ -87,6 +87,7 @@ if __name__ == "__main__":
 
                     if class_id in class_mapping:
                         class_mask = np.where(mask == class_id, 255, 0).astype(np.uint8)
+
                         contours, _ = cv2.findContours(class_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
                         objects_per_class[class_mapping[class_id]] = len(contours)
 

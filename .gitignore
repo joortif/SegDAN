@@ -5,4 +5,5 @@ segdan/src/datasets/stratified_segementation.py
 .vscode/
 dist/
 segdan.egg-info/
+lightning_logs/
 

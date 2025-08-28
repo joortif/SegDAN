@@ -2,7 +2,7 @@ from tkinter import ttk
 
 class IntroductionFrame(ttk.Frame):
 
-    def __init__(self, parent, controller, final_dict):
+    def __init__(self, parent, controller, config_data, final_dict):
         ttk.Frame.__init__(self, parent)
         
         label_title = ttk.Label(self, text="Welcome to SegDAN configuration wizard.", font=("Arial", 18, "bold"))

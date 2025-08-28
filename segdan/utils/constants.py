@@ -2,6 +2,10 @@ from enum import Enum
 
 VALID_EXTENSIONS: tuple = ('.jpg', '.jpeg', '.png', '.bmp', '.tiff')
 
+class ReductionMethods(Enum):
+    VOTE_K = "vote_k"
+    CLUSTERING = "clustering"
+
 class StratificationStrategy(Enum):
     PIXELS = "pixels"
     OBJECTS = "objects"

@@ -66,3 +66,33 @@ class Utils():
         plt.show()
 
         return overlay
+    
+    def calculate_closest_resize(mode_height, mode_width, stride=32, max_padding=16, RESIZE_VALUES = [224, 384, 512, 640, 1024]):
+
+        valid_sizes = [s for s in RESIZE_VALUES if s % stride == 0]
+
+        original_mode_height = mode_height
+        original_mode_width = mode_width
+
+        if mode_height != mode_width:
+            max_side = max(mode_height, mode_width)
+            print(f"Making size square by using {max_side}px height and {max_side}px width.")
+            mode_height = mode_width = max_side
+
+        closest_height = min(valid_sizes, key=lambda x: abs(x - mode_height))
+        diff_height = abs(closest_height - mode_height)
+        if diff_height <= max_padding:
+            if closest_height != mode_height:
+                print(f"Dimensions {mode_height}px adjusted to {closest_height}px (compatible with stride {stride}).")
+            mode_height = mode_width = closest_height
+        else:
+            lower_valid = [s for s in valid_sizes if s <= mode_height]
+            new_height = max(lower_valid) if lower_valid else min(valid_sizes)
+            if new_height != mode_height:
+                print(f"Dimensions {mode_height}px adjusted down to {new_height}px (compatible with stride {stride}).")
+            mode_height = mode_width = new_height
+
+        if original_mode_height != new_height or original_mode_width != new_height:
+            print(f"Images will be resized to {mode_height}px height and {mode_width}px width.")
+            
+        return mode_height, mode_width

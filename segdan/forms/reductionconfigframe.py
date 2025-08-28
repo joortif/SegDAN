@@ -14,7 +14,7 @@ class ReductionConfigFrame(ttk.Frame):
 
         if "reduction_data" not in self.config_data:
             self.config_data["reduction_data"] = {
-                "reduction_percentage": self.config_data.get("reduction_percentage", tk.StringVar(value="0.7")),
+                "retention_percentage": self.config_data.get("retention_percentage", tk.StringVar(value="0.7")),
                 "reduction_type": self.config_data.get("reduction_type", tk.StringVar(value="representative")),
                 "diverse_percentage": self.config_data.get("diverse_percentage", tk.StringVar(value="0.2")),
                 "include_outliers": self.config_data.get("include_outliers", tk.BooleanVar(value=False)),
@@ -84,9 +84,9 @@ class ReductionConfigFrame(ttk.Frame):
         self.reduction_type_combobox = ttk.Combobox(self.reduction_config_labelframe, textvariable=self.reduction_data['reduction_type'], values=reduction_types, state="readonly", width=15)
         ToolTip(self.reduction_type_label, msg="Strategy for selecting the subset of images from each cluster.")
 
-        self.reduction_percentage_label = tk.Label(self.reduction_config_labelframe, text="Reduction percentage *")
-        self.reduction_percentage_entry = tk.Entry(self.reduction_config_labelframe, textvariable=self.reduction_data['reduction_percentage'], width=10, validate="key", validatecommand=vcmd)
-        ToolTip(self.reduction_percentage_label, msg="Percentage of the dataset retained after reduction.")
+        self.retention_percentage_label = tk.Label(self.reduction_config_labelframe, text="Reduction percentage *")
+        self.retention_percentage_entry = tk.Entry(self.reduction_config_labelframe, textvariable=self.reduction_data['retention_percentage'], width=10, validate="key", validatecommand=vcmd)
+        ToolTip(self.retention_percentage_label, msg="Percentage of the dataset retained after reduction.")
 
         self.diverse_percentage_label = tk.Label(self.reduction_config_labelframe, text="Diverse percentage *")
         self.diverse_percentage_entry = tk.Entry(self.reduction_config_labelframe, textvariable=self.reduction_data['diverse_percentage'], width=10, validate="key", validatecommand=vcmd)
@@ -111,11 +111,11 @@ class ReductionConfigFrame(ttk.Frame):
         self.reduction_type_combobox.grid(row=self.row, column=0, padx=10, pady=5)
 
         self.row+=1
-        self.reduction_percentage_label.grid(row=self.row, column=0, padx=10, pady=5)
+        self.retention_percentage_label.grid(row=self.row, column=0, padx=10, pady=5)
         self.diverse_percentage_label.grid(row=self.row, column=1, padx=10, pady=5)
             
         self.row+=1
-        self.reduction_percentage_entry.grid(row=self.row, column=0, padx=10, pady=5)
+        self.retention_percentage_entry.grid(row=self.row, column=0, padx=10, pady=5)
         self.diverse_percentage_entry.grid(row=self.row, column=1, padx=10, pady=5)
 
         self.row+=1
@@ -178,7 +178,7 @@ class ReductionConfigFrame(ttk.Frame):
     
     def validate_form(self):
 
-        reduc_percentage = self.reduction_data["reduction_percentage"].get()
+        reduc_percentage = self.reduction_data["retention_percentage"].get()
 
 
         if reduc_percentage.strip() == "":

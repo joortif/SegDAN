@@ -426,11 +426,11 @@ class ConfigHandler():
         
         if data.get("reduction"):
 
-            if "reduction_percentage" not in data:
-                raise ValueError(f"When 'reduction' is selected, a reduction percentage must be specified under 'reduction_percentage'.")
+            if "retention_percentage" not in data:
+                raise ValueError(f"When 'reduction' is selected, a reduction percentage must be specified under 'retention_percentage'.")
             
-            if not isinstance(data["reduction_percentage"], float): 
-                raise ValueError(f"The value of 'reduction_percentage' must be a float, but got {type(data['reduction_percentage'])}.")
+            if not isinstance(data["retention_percentage"], float): 
+                raise ValueError(f"The value of 'retention_percentage' must be a float, but got {type(data['retention_percentage'])}.")
             
             if data.get("reduction_type") not in ConfigHandler.CONFIGURATION_VALUES["reduction_type"]:
                 raise ValueError(f"Invalid reduction type. Must be one of: {ConfigHandler.CONFIGURATION_VALUES['reduction_type']}.")
