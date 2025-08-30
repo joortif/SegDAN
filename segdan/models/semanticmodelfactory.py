@@ -7,7 +7,7 @@ class SemanticSegmentationModelFactory:
     def __init__(self):
         self.framework_map = {
             "smp": (SMPModel, {"in_channels", "t_max"}),
-            "huggingface": (HFTransformerModel, {"batch_size"})
+            "huggingface": (HFTransformerModel, set())
         }
 
     def get_model(self, framework: str, args: dict) -> SemanticSegmentationModel:

@@ -12,17 +12,16 @@ from segdan.metrics.compute_metrics import compute_metrics
 from segdan.models.semanticsegmentationmodel import SemanticSegmentationModel
 
 class SMPModel(pl.LightningModule, SemanticSegmentationModel):
-    def __init__(self, in_channels: int , classes: int, metrics: np.ndarray, selection_metric: str, epochs:int, t_max: int, output_path:str, 
-                 model_name: str="unet", encoder_name: str="resnet34", **kwargs):
+    def __init__(self, in_channels: int , classes: int, metrics: np.ndarray, imgsz:int, selection_metric: str, epochs:int, t_max: Optional[int], output_path:str, 
+                 model_name: str="unet", encoder_name: str="resnet34", fraction=Optional[int], **kwargs):
         
         super().__init__()
 
-        SemanticSegmentationModel.__init__(self, classes=classes, epochs=epochs, metrics=metrics, 
+        SemanticSegmentationModel.__init__(self, classes=classes, epochs=epochs, imgsz=imgsz, metrics=metrics, 
                                            selection_metric=selection_metric, 
-                                           model_name=model_name, model_size=encoder_name, output_path=output_path)
+                                           model_name=model_name, model_size=encoder_name, output_path=output_path, fraction=fraction)
         self.model_name = model_name.replace("-", "")
         self.in_channels = in_channels
-
 
         self.model = smp.create_model(
             arch=self.model_name,
@@ -52,6 +51,8 @@ class SMPModel(pl.LightningModule, SemanticSegmentationModel):
         self.training_step_outputs = []
         self.validation_step_outputs = []
         self.test_step_outputs = []
+
+        self.autobatch_imgsz()
 
     def forward(self, image):
         # Normalize image
@@ -145,7 +146,7 @@ class SMPModel(pl.LightningModule, SemanticSegmentationModel):
         self.test_step_outputs.clear()
 
     def configure_optimizers(self):
-        optimizer = torch.optim.Adam(self.parameters(), lr=2e-4)
+        optimizer = torch.optim.Adam(self.parameters(), lr=self.lr)
         scheduler = lr_scheduler.CosineAnnealingLR(optimizer, T_max=self.t_max, eta_min=1e-5)
         return {
             "optimizer": optimizer,

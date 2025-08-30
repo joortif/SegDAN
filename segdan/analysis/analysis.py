@@ -48,8 +48,7 @@ def analyze_data(general_data: dict, transformerFactory: ConverterFactory, outpu
 
     if label_path is None:
         dataset = ImageDataset(image_path)
-        height_mode, width_mode = _analyze_and_save_results(dataset, output_path, verbose)
-        return 
+        return _analyze_and_save_results(dataset, output_path, verbose) 
 
     if label_format == LabelFormat.MASK.value:
         if binary:

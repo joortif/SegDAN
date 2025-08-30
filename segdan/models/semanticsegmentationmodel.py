@@ -1,20 +1,28 @@
 import os
+from typing import Optional
 import numpy as np
 import torch
 import re
 
+from segdan.exceptions.exceptions import NoValidAutobatchConfigException
+from segdan.training.autobatch import autobatch
+
 class SemanticSegmentationModel:
 
-    def __init__(self, classes: np.ndarray, epochs:int, metrics: np.ndarray, selection_metric: str, model_name:str, model_size:str, output_path:str):
+    def __init__(self, classes: np.ndarray, epochs:int, imgsz:int, metrics: np.ndarray, selection_metric: str, model_name:str, model_size:str, output_path:str, fraction:Optional[int]=0.6):
         
         self.classes = classes
         self.out_classes = len([cls for cls in self.classes if cls.lower() !="background"])
         self.epochs = epochs
+        self.imgsz = imgsz
         self.metrics = metrics
         self.selection_metric = selection_metric
         self.model_name = model_name
         self.model_size = model_size
         self.output_path = output_path
+        self.fraction = fraction
+
+        self.lr = 2e-4
 
     def save_model(self, output_dir, weights_only=True):
         model_save_name = f"{self.model_name}-{self.model_size}-ep{self.epochs}.pth"
@@ -65,6 +73,22 @@ class SemanticSegmentationModel:
                 else:
                     print(f"Class {c:<2} : {'N/A':>8}")
             print()
+
+
+    def autobatch_imgsz(self):
+        device = next(self.model.parameters()).device
+
+        if device.type == "cpu" and torch.cuda.is_available():
+            self.model = self.model.to("cuda")
+            
+        try:
+            self.batch = autobatch(model=self.model, imgsz=self.imgsz, fraction=self.fraction)
+        except NoValidAutobatchConfigException as e:
+            print(f"Autobatch failed: {e}")
+        
+        if self.batch < 16:
+            self.lr = 2e-5
+            print(f"Reducing learning rate to {self.lr}")
         
     def run_training():
         raise NotImplementedError("Subclasses must implement this method") 

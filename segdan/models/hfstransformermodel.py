@@ -38,9 +38,9 @@ class HFTransformerModel(SemanticSegmentationModel):
         },
     }
 
-    def __init__(self, model_name, model_size, out_classes, metrics, selection_metric, epochs, batch_size, output_path):
-        super.__init__(self, out_classes=out_classes, epochs=epochs, metrics=metrics, selection_metric=selection_metric, 
-                       model_name=model_name, model_size=encoder_name, output_path=output_path)
+    def __init__(self, model_name, model_size, out_classes, metrics, selection_metric, epochs, imgsz, output_path, fraction):
+        super.__init__(self, out_classes=out_classes, epochs=epochs, imgsz=imgsz, metrics=metrics, selection_metric=selection_metric, 
+                       model_name=model_name, model_size=model_size, output_path=output_path, fraction=fraction)
         
         if self.model_name not in self.MODEL_CONFIGS:
             raise ValueError(f"Unsupported HuggingFace semantic segmentation model {self.model_name}. Supported models are: {list(self.MODEL_CONFIGS.keys())}")
@@ -51,7 +51,7 @@ class HFTransformerModel(SemanticSegmentationModel):
         self.model = config["model_class"].from_pretrained(pretrained_name, num_labels=self.out_classes, ignore_mismatched_sizes=True)
         self.feature_extractor = config["processor_class"].from_pretrained(pretrained_name, do_resize=False, use_fast=True)
 
-        self.batch_size = batch_size
+        self.autobatch_imgsz()
 
     def huggingface_collate_fn(self, batch):
         images, masks = zip(*batch)
@@ -193,8 +193,8 @@ class HFTransformerModel(SemanticSegmentationModel):
         output_dir=self.output_path,          
         eval_strategy="epoch",
         learning_rate=5e-5,             
-        per_device_train_batch_size=self.batch_size,   
-        per_device_eval_batch_size=self.batch_size,    
+        per_device_train_batch_size=self.batch,   
+        per_device_eval_batch_size=self.batch,    
         num_train_epochs=self.epochs,              
         weight_decay=0.01,               
         logging_dir=None,            

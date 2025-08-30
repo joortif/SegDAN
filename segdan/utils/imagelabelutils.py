@@ -77,7 +77,7 @@ class ImageLabelUtils:
         if verbose:
             logger.info(f"Checking label extensions from path: {label_dir}...")
 
-        labels_ext = {os.path.splitext(file)[1].lower() for file in os.listdir(label_dir) if os.path.splitext(file)[1].lower() in VALID_ANNOTATION_EXTENSIONS}
+        labels_ext = {os.path.splitext(file)[1].lower() for file in os.listdir(label_dir) if os.path.splitext(file)[1].lower() in ConfigHandler.VALID_ANNOTATION_EXTENSIONS}
 
         if len(labels_ext) == 1:
             ext = labels_ext.pop()  

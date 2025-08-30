@@ -3,7 +3,7 @@ import cv2
 
 def get_training_augmentation(resize_height = 512, resize_width=512):
     train_transform = [
-        A.Resize(height=resize_height, width=resize_width, antialias=True),
+        A.Resize(height=resize_height, width=resize_width),
         A.HorizontalFlip(p=0.5),
         A.Affine(
             scale=(0.8, 1.2),  
@@ -39,7 +39,7 @@ def get_training_augmentation(resize_height = 512, resize_width=512):
             ],
             p=0.9,
         ),
-        A.CoarseDropout(max_holes=8, max_height=32, max_width=32, fill=255, fill_mask=255, p=0.3),
+        A.CoarseDropout(num_holes_range=(1,8), hole_height_range=(8,32), hole_width_range=(8,32), fill=255, fill_mask=255, p=0.3),
         A.GridDistortion(p=0.2),
     ]
     return A.Compose(train_transform)

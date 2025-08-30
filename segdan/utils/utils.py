@@ -3,6 +3,7 @@ import logging
 import cv2
 import matplotlib.pyplot as plt
 import numpy as np
+import segdan.utils.constants
 
 class Utils():
 
@@ -67,9 +68,9 @@ class Utils():
 
         return overlay
     
-    def calculate_closest_resize(mode_height, mode_width, stride=32, max_padding=16, RESIZE_VALUES = [224, 384, 512, 640, 1024]):
+    def calculate_closest_resize(mode_height, mode_width, stride=32, max_padding=16):
 
-        valid_sizes = [s for s in RESIZE_VALUES if s % stride == 0]
+        valid_sizes = [s for s in segdan.utils.constants.IMAGE_RESIZE_VALUES if s % stride == 0]
 
         original_mode_height = mode_height
         original_mode_width = mode_width
@@ -95,4 +96,4 @@ class Utils():
         if original_mode_height != new_height or original_mode_width != new_height:
             print(f"Images will be resized to {mode_height}px height and {mode_width}px width.")
             
-        return mode_height, mode_width
+        return mode_height

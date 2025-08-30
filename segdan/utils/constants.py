@@ -1,6 +1,8 @@
 from enum import Enum
 
 VALID_EXTENSIONS: tuple = ('.jpg', '.jpeg', '.png', '.bmp', '.tiff')
+IMAGE_RESIZE_VALUES: tuple = (224, 384, 512, 640, 1024)
+AUTOBATCH_SIZES: tuple = (1, 2, 4, 8, 16, 32, 64)
 
 class ReductionMethods(Enum):
     VOTE_K = "vote_k"
