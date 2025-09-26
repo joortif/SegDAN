@@ -9,7 +9,7 @@ from segdan.training.autobatch import autobatch
 
 class SemanticSegmentationModel:
 
-    def __init__(self, classes: np.ndarray, epochs:int, imgsz:int, metrics: np.ndarray, selection_metric: str, model_name:str, model_size:str, output_path:str, fraction:Optional[int]=0.6):
+    def __init__(self, classes: np.ndarray, epochs:int, imgsz:int, metrics: np.ndarray, selection_metric: str, model_name:str, model_size:str, output_path:str, fraction:Optional[float]=0.6):
         
         self.classes = classes
         self.out_classes = len([cls for cls in self.classes if cls.lower() !="background"])

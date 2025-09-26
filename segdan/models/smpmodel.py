@@ -13,7 +13,7 @@ from segdan.models.semanticsegmentationmodel import SemanticSegmentationModel
 
 class SMPModel(pl.LightningModule, SemanticSegmentationModel):
     def __init__(self, in_channels: int , classes: int, metrics: np.ndarray, imgsz:int, selection_metric: str, epochs:int, t_max: Optional[int], output_path:str, 
-                 model_name: str="unet", encoder_name: str="resnet34", fraction=Optional[int], **kwargs):
+                 model_name: str="unet", encoder_name: str="resnet34", fraction:Optional[float]=0.6, **kwargs):
         
         super().__init__()
 
@@ -200,6 +200,6 @@ class SMPModel(pl.LightningModule, SemanticSegmentationModel):
             self.show_metrics(valid_metrics[0], "Validation")
 
         evaluation_metric = self.save_metrics(trainer, test_loader, f"{self.model_name} - {self.model_size}", f"metrics_{self.model_name}.csv", training_time=total_time)
-        model_output_path = self.save_model(self.output_path)
+        model_output_path = self.save_model(self.output_path, weights_only=False)
 
         return evaluation_metric, model_output_path
