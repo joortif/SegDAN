@@ -45,9 +45,11 @@ def reduce_dataset(config, clustering_results, evaluation_metric, dataset, label
     os.makedirs(output_path, exist_ok=True)
     
     if method.lower() == ReductionMethods.VOTE_K.value:
-        reduced_ds = fast_vote_K(embeddings_dict, retention_percentage, dataset, output_path)
-    elif method.lower() == ReductionMethods.CLUSTERING.value:
-        reduced_ds = reduce_clusters(config, dataset, embeddings_dict, clustering_results, evaluation_metric, label_path, logger, output_path, verbose)
+        reduced_ds = fast_vote_K(embeddings_dict=embeddings_dict, retention_percentage=retention_percentage, dataset=dataset, output_dir=output_path)
+    else:
+        reduced_ds = reduce_clusters(config=config, dataset=dataset, embeddings_dict=embeddings_dict, retention_percentage=retention_percentage, 
+                                     clustering_results=clustering_results, evaluation_metric=evaluation_metric, logger=logger, output_path=output_path,
+                                     verbose=verbose)
 
     if use_reduced and label_path:
         label_extension = ImageLabelUtils.check_label_extensions(label_path)

@@ -10,6 +10,7 @@ from segdan.utils.constants import ClusteringModelName
 
 def _find_best_model(clustering_model_configurations, evaluation_metric, logger, verbose):
  
+    print(clustering_model_configurations)
     if evaluation_metric == 'davies':
         best_model = min(clustering_model_configurations.items(), key=lambda item: item[1][-2])
     else:
@@ -53,7 +54,7 @@ def reduce_clusters(config, dataset, embeddings_dict, retention_percentage, clus
     reduction_type = config.get('reduction_type')
     use_reduced = config.get('use_reduced')
     reduction_model_name = config.get('reduction_model')
-    embeddings = list(embeddings_dict.values())
+    embeddings = np.array(list(embeddings_dict.values()))
 
     if reduction_model_name == "best_model":
         reduction_model_info, labels = _find_best_model(clustering_results, evaluation_metric, logger, verbose)
@@ -69,15 +70,12 @@ def reduce_clusters(config, dataset, embeddings_dict, retention_percentage, clus
     clustering_factory = ClusteringFactory()
     model = clustering_factory.generate_clustering_model(reduction_model_name, dataset, embeddings, random_state)
 
-    output_dir = os.path.join(output_path, "reduction", "images" if use_reduced else "")
-    os.makedirs(output_dir, exist_ok=True)
-
     select_params = {
         "retention_percentage": retention_percentage,
         "diverse_percentage": diverse_percentage,
         "selection_type": reduction_type,
         "existing_labels": labels,
-        "output_directory": output_dir
+        "output_directory": output_path
     }
 
     if reduction_model_name == ClusteringModelName.KMEANS.value:

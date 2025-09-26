@@ -33,7 +33,10 @@ class TrainingDataset():
     
     def save_txt_format(self, row, img_dir, label_dir):
         shutil.copy(row["img_path"], os.path.join(img_dir, os.path.basename(row["img_path"])))
-        txt_label_path = row["mask_path"].replace(".png", ".txt").replace(".jpg", ".txt")
+        
+        txt_label_path = os.path.splitext(row["mask_path"])[0] + ".txt"
+        #txt_label_path = row["mask_path"].replace(".png", ".txt").replace(".jpg", ".txt") PROBAR
+        
         txt_label_path = os.path.join(self.original_label_path, os.path.basename(txt_label_path))
         if os.path.exists(txt_label_path):
             shutil.copy(txt_label_path, os.path.join(label_dir, os.path.basename(txt_label_path)))
@@ -49,11 +52,36 @@ class TrainingDataset():
         for ann in coco_data["annotations"]:
             if ann["image_id"] == current_img_id:
                 selected_annotations.append(ann)
-        shutil.copy(row["img_path"], os.path.join(img_dir, os.path.basename(row["img_path"])))        
+        shutil.copy(row["img_path"], os.path.join(img_dir, os.path.basename(row["img_path"])))   
+
+    def process_folds(self, kfold: KFold, image_paths:str, mask_paths: str, distributions):
+        
+        used_val_indices = set()
+        folds = []
+
+        for fold_idx, (train_idx, val_idx) in tqdm(enumerate(kfold.split(X=np.zeros(len(image_paths)), 
+                                                                      y=distributions)), 
+                                           total=kfold.get_n_splits(), 
+                                           desc="Processing folds"):
+
+            if any(idx in used_val_indices for idx in val_idx):
+                raise ValueError(f"Duplicate indices found in fold {fold_idx + 1} for the validation set.")
+            
+            used_val_indices.update(val_idx)
+            
+            train_images = [image_paths[i] for i in train_idx]
+            train_masks = [mask_paths[i] for i in train_idx]
+            val_images = [image_paths[i] for i in val_idx]
+            val_masks = [mask_paths[i] for i in val_idx]
+
+            train_df = pd.DataFrame({"img_path": train_images, "mask_path": train_masks})
+            val_df = pd.DataFrame({"img_path": val_images, "mask_path": val_masks})
+            folds.append((train_df, val_df))
+
+            fold_dir = os.path.join(self.output_path, f"fold_{fold_idx + 1}")
+            self.save_split_to_directory(train_df, val_df, None, fold_dir)     
 
     def save_split_to_directory(self, train_df, val_df, test_df, fold_dir: str = None):
-
-        print("Saving splits...")
 
         subsets = {"train": train_df, "val": val_df, "test": test_df}
 
@@ -71,7 +99,9 @@ class TrainingDataset():
         for subset, df in subsets.items():
             if df is None:
                 continue
-            
+
+            print(f"Saving {subset} split...")
+
             img_dir = os.path.join(output_path, subset, "images")
             label_dir = os.path.join(output_path, subset, "labels")
             os.makedirs(img_dir, exist_ok=True)
@@ -106,21 +136,22 @@ class TrainingDataset():
         
     def split(self, general_data: dict, split_data: dict):
 
-        stratification_strategy = split_data["stratification_type"]
-        stratify = split_data["stratification"]
-        hold_out = split_data["split_method"]
-        
-        random_state = split_data["stratification_random_seed"]
-        background = general_data["background"]
-        n_folds = split_data["cross_val"]["num_folds"]
+        stratification_strategy = split_data.get("stratification_type")
+        stratify = split_data.get("stratification")
+        hold_out = split_data.get("split_method")
+
+        random_state = split_data.get("stratification_random_seed")
+        background = general_data.get("background")
+        n_folds = split_data.get("cross_val", {}).get("num_folds")
+        test_fraction = split_data.get("cross_val", {}).get("test_fraction")
 
         if stratify and stratification_strategy.lower() not in ["pixels", "objects", "pixel_to_object_ratio"]:
             raise ValueError("Invalid value for stratification_strategy. Must be 'pixels', 'objects' or 'pixel_to_object_ratio'.")
         
         if hold_out:
-            train_fraction = split_data["hold_out"]["train"]
-            val_fraction = split_data["hold_out"]["valid"]
-            test_fraction = split_data["hold_out"]["test"]
+            train_fraction = split_data.get("hold_out", {}).get("train")
+            val_fraction = split_data.get("hold_out", {}).get("valid")
+            test_fraction = split_data.get("hold_out", {}).get("test")
             if not np.isclose(train_fraction + val_fraction + test_fraction, 1.0):
                 raise ValueError("The sum of train_fraction, val_fraction, and test_fraction must equal 1.0")
 
@@ -142,7 +173,7 @@ class TrainingDataset():
 
             return num_classes
         
-        return self.kfold_cross_validation(n_folds, stratify, stratification_strategy, background, random_state)
+        return self.kfold_cross_validation(n_folds, stratify, test_fraction, stratification_strategy, background, random_state)
 
         
     def stratify_split(self, train_fraction, val_fraction, test_fraction, stratification_strategy, background, random_state):
@@ -226,6 +257,7 @@ class TrainingDataset():
     def kfold_cross_validation(
         self,
         n_splits: int,
+        test_fraction:int, 
         stratify: bool = False, 
         stratification_strategy: str = "pixels",
         background: int = None,
@@ -248,9 +280,15 @@ class TrainingDataset():
             raise ValueError("The number of images and masks must be the same.")
 
         image_paths, mask_paths = shuffle(self.image_files, self.mask_paths_multilabel, random_state=random_state)
+        
+        train_val_images, test_images, train_val_masks, test_masks = train_test_split(
+            image_paths, mask_paths, test_size=test_fraction, random_state=random_state
+        )
 
-        used_val_indices = set()
-        folds = []
+        test_df = pd.DataFrame({"img_path": test_images, "mask_path": test_masks})
+        test_dir = os.path.join(self.output_path, "test")
+        self.save_split_to_directory(None, None, test_df, test_dir)
+
         num_classes = None
 
         if not stratify:
@@ -258,26 +296,7 @@ class TrainingDataset():
 
             kfold = KFold(n_splits=n_splits, shuffle=True, random_state=random_state)
 
-            for fold_idx, (train_idx, val_idx) in tqdm(enumerate(kfold.split(X=np.zeros(len(image_paths)), y=np.zeros(len(image_paths)))), 
-                                                       total=n_splits, 
-                                                       desc="Processing folds"):
-
-                if any(idx in used_val_indices for idx in val_idx):
-                    raise ValueError(f"Duplicate indices found in fold {fold_idx + 1} for the validation set.")
-                
-                used_val_indices.update(val_idx)
-                
-                train_images = [image_paths[i] for i in train_idx]
-                train_masks = [mask_paths[i] for i in train_idx]
-                val_images = [image_paths[i] for i in val_idx]
-                val_masks = [mask_paths[i] for i in val_idx]
-
-                train_df = pd.DataFrame({"img_path": train_images, "mask_path": train_masks})
-                val_df = pd.DataFrame({"img_path": val_images, "mask_path": val_masks})
-                folds.append((train_df, val_df))
-
-                fold_dir = os.path.join(self.output_path, f"fold_{fold_idx + 1}")
-                self.save_split_to_directory(train_df, val_df, None, fold_dir)
+            self.process_folds(kfold, train_val_images, train_val_masks, np.zeros(len(train_val_images)))
                 
             return num_classes
 
@@ -295,33 +314,12 @@ class TrainingDataset():
 
         print(f"Stratification done. {num_classes} classes detected.")
 
-
         stratifier = IterativeStratification(
             n_splits=n_splits,
             order=1,
             sample_distribution_per_fold=[1.0 / n_splits] * n_splits
         )
 
-        for fold_idx, (train_idx, val_idx) in tqdm(enumerate(stratifier.split(X=np.zeros(len(image_paths)), 
-                                                                      y=distributions)), 
-                                           total=n_splits, 
-                                           desc="Processing folds"):
-
-            if any(idx in used_val_indices for idx in val_idx):
-                raise ValueError(f"Duplicate indices found in fold {fold_idx + 1} for the validation set.")
-            
-            used_val_indices.update(val_idx)
-            
-            train_images = [image_paths[i] for i in train_idx]
-            train_masks = [mask_paths[i] for i in train_idx]
-            val_images = [image_paths[i] for i in val_idx]
-            val_masks = [mask_paths[i] for i in val_idx]
-
-            train_df = pd.DataFrame({"img_path": train_images, "mask_path": train_masks})
-            val_df = pd.DataFrame({"img_path": val_images, "mask_path": val_masks})
-            folds.append((train_df, val_df))
-
-            fold_dir = os.path.join(self.output_path, f"fold_{fold_idx + 1}")
-            self.save_split_to_directory(train_df, val_df, None, fold_dir)
+        self.process_folds(stratifier, train_val_images, train_val_masks, n_splits, distributions)
 
         return num_classes

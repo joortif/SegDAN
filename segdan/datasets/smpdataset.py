@@ -66,8 +66,8 @@ class SMPDataset(BaseDataset):
             sample = self.augmentation(image=image, mask=mask_remap)
             image, mask_remap = sample["image"], sample["mask"]
             
-            unique_vals = np.unique(mask_remap)
-            assert any(val != 255 for val in unique_vals), f"Mask at index {i} became empty after augmentation."
+            #unique_vals = np.unique(mask_remap)
+            #assert any(val != 255 for val in unique_vals), f"Mask at index {i} became empty after augmentation."
             
         mask_vals = set(np.unique(mask_remap))
         if not mask_vals.issubset(valid_values):

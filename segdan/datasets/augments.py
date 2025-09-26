@@ -1,7 +1,10 @@
 import albumentations as A
 import cv2
 
-def get_training_augmentation(resize_height = 512, resize_width=512):
+def get_training_augmentation(resize_height = 512, resize_width=512, background=None):
+    if background == None:
+        background = 0
+        
     train_transform = [
         A.Resize(height=resize_height, width=resize_width),
         A.HorizontalFlip(p=0.5),
@@ -9,12 +12,12 @@ def get_training_augmentation(resize_height = 512, resize_width=512):
             scale=(0.8, 1.2),  
             translate_percent={"x": 0.1, "y": 0.1}, 
             rotate=10, 
-            fill=255, 
-            fill_mask=255,  
+            fill=background, 
+            fill_mask=background,  
             border_mode=cv2.BORDER_CONSTANT, 
             p=1
         ),
-        A.PadIfNeeded(min_height=None, min_width=None, pad_height_divisor=32, pad_width_divisor=32, fill=255, fill_mask=255),
+        A.PadIfNeeded(min_height=None, min_width=None, pad_height_divisor=32, pad_width_divisor=32, fill=background, fill_mask=background),
         A.OneOf(
             [
                 A.GaussNoise(std_range=(0.1,0.2), p=1),
@@ -39,15 +42,18 @@ def get_training_augmentation(resize_height = 512, resize_width=512):
             ],
             p=0.9,
         ),
-        A.CoarseDropout(num_holes_range=(1,8), hole_height_range=(8,32), hole_width_range=(8,32), fill=255, fill_mask=255, p=0.3),
+        A.CoarseDropout(num_holes_range=(1,8), hole_height_range=(8,32), hole_width_range=(8,32), fill=background, fill_mask=background, p=0.3),
         A.GridDistortion(p=0.2),
     ]
     return A.Compose(train_transform)
 
 
-def get_validation_augmentation(resize_height = 512, resize_width=512):
+def get_validation_augmentation(resize_height = 512, resize_width=512, background=None):
+    if background == None:
+        background = 0
+
     test_transform = [
        A.Resize(height=resize_height, width=resize_width),
-       A.PadIfNeeded(min_height=None, min_width=None, pad_height_divisor=32, pad_width_divisor=32, fill=255, fill_mask=255)
+       A.PadIfNeeded(min_height=None, min_width=None, pad_height_divisor=32, pad_width_divisor=32, fill=background, fill_mask=background)
     ]
     return A.Compose(test_transform)
