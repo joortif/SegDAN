@@ -1,4 +1,4 @@
-from imagedatasetanalyzer import HuggingFaceEmbedding, PyTorchEmbedding, TensorflowEmbedding, OpenCVLBPEmbedding
+from imagedatasetanalyzer import HuggingFaceEmbedding, PyTorchEmbedding, TensorflowEmbedding, OpenCVLBPEmbedding, MedImageInsightEmbedding
 
 class EmbeddingFactory:
 
@@ -23,7 +23,8 @@ class EmbeddingFactory:
             'huggingface': lambda: HuggingFaceEmbedding(model_name, batch_size),
             'pytorch': lambda: PyTorchEmbedding(model_name, batch_size),
             'tensorflow': lambda: TensorflowEmbedding(model_name, batch_size, res_height, res_width),
-            'opencv': lambda: OpenCVLBPEmbedding(lbp_radius, lbp_num_points, res_height, res_width, batch_size, lbp_method)
+            'opencv': lambda: OpenCVLBPEmbedding(lbp_radius, lbp_num_points, res_height, res_width, batch_size, lbp_method),
+            'medimageinsight': lambda: MedImageInsightEmbedding(batch_size)
         }
 
         if framework not in framework_map:

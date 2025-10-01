@@ -1,6 +1,6 @@
 albumentations>=2.0.6
 huggingface_hub>=0.26.2
-imagedatasetanalyzer>=0.3.4
+imagedatasetanalyzer>=0.4.0
 matplotlib>=3.8.4
 numpy>=1.26.4
 opencv_contrib_python>=4.9.0.80

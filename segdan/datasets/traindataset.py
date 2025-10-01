@@ -143,7 +143,7 @@ class TrainingDataset():
         random_state = split_data.get("stratification_random_seed")
         background = general_data.get("background")
         n_folds = split_data.get("cross_val", {}).get("num_folds")
-        test_fraction = split_data.get("cross_val", {}).get("test_fraction")
+        test_fraction = split_data.get("cross_val", {}).get("test")
 
         if stratify and stratification_strategy.lower() not in ["pixels", "objects", "pixel_to_object_ratio"]:
             raise ValueError("Invalid value for stratification_strategy. Must be 'pixels', 'objects' or 'pixel_to_object_ratio'.")
@@ -173,7 +173,7 @@ class TrainingDataset():
 
             return num_classes
         
-        return self.kfold_cross_validation(n_folds, stratify, test_fraction, stratification_strategy, background, random_state)
+        return self.kfold_cross_validation(n_folds, test_fraction, stratify, stratification_strategy, background, random_state)
 
         
     def stratify_split(self, train_fraction, val_fraction, test_fraction, stratification_strategy, background, random_state):
@@ -286,8 +286,7 @@ class TrainingDataset():
         )
 
         test_df = pd.DataFrame({"img_path": test_images, "mask_path": test_masks})
-        test_dir = os.path.join(self.output_path, "test")
-        self.save_split_to_directory(None, None, test_df, test_dir)
+        self.save_split_to_directory(None, None, test_df, None)
 
         num_classes = None
 
