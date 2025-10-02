@@ -1,4 +1,6 @@
 import os
+import logging
+
 import numpy as np
 from sklearn.neighbors import NearestNeighbors
 from imagedatasetanalyzer import ImageDataset
@@ -8,9 +10,10 @@ import shutil
 from segdan.clustering.clusteringfactory import ClusteringFactory
 from segdan.utils.constants import ClusteringModelName
 
-def _find_best_model(clustering_model_configurations, evaluation_metric, logger, verbose):
+logger = logging.getLogger(__name__)
+
+def _find_best_model(clustering_model_configurations, evaluation_metric, verbose):
  
-    print(clustering_model_configurations)
     if evaluation_metric == 'davies':
         best_model = min(clustering_model_configurations.items(), key=lambda item: item[1][-2])
     else:
@@ -48,7 +51,7 @@ def _find_best_model(clustering_model_configurations, evaluation_metric, logger,
 
     return best_model_config, best_model_labels
 
-def reduce_clusters(config, dataset, embeddings_dict, retention_percentage, clustering_results, evaluation_metric, logger, output_path, verbose):
+def reduce_clusters(config, dataset, embeddings_dict, retention_percentage, clustering_results, evaluation_metric, output_path, verbose):
     diverse_percentage = config.get('diverse_percentage')
     include_outliers = config.get('include_outliers')
     reduction_type = config.get('reduction_type')
@@ -57,13 +60,13 @@ def reduce_clusters(config, dataset, embeddings_dict, retention_percentage, clus
     embeddings = np.array(list(embeddings_dict.values()))
 
     if reduction_model_name == "best_model":
-        reduction_model_info, labels = _find_best_model(clustering_results, evaluation_metric, logger, verbose)
+        reduction_model_info, labels = _find_best_model(clustering_results, evaluation_metric, verbose)
         reduction_model_name = reduction_model_info["model_name"]
     else:
         reduction_model_info = clustering_results[reduction_model_name]
         labels = reduction_model_info[-1]
 
-    print(f"Using {reduction_model_name} model for dataset reduction.")
+    logger.info(f"Using {reduction_model_name} model for dataset reduction.")
 
     random_state = reduction_model_info["random_state"] if reduction_model_name == 'kmeans' else 123
 

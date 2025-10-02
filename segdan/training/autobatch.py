@@ -1,8 +1,11 @@
 import os
 import torch
+import logging
 
 from segdan.exceptions.exceptions import NoValidAutobatchConfigException
 import segdan.utils.constants
+
+logger = logging.getLogger(__name__)
 
 def calculate_model_size(model: torch.nn.Module):
     param_size = 0
@@ -75,13 +78,13 @@ def autobatch(
         if model_size > usable_mem:
             raise NoValidAutobatchConfigException(usable_mem, f"Model size ({model_size:.2f} GB) exceeds usable memory ({usable_mem:.2f} GB).")
             
-        print(f"{d} device properties (GiB): ")
-        print(f"    Total memory: {t:.2f}")
-        print(f"    Reserved memory: {r:.2f}")
-        print(f"    Allocated memory: {a:.2f}")
-        print(f"    Free memory: {f:.2f}")
-        print(f"    Model size: {model_size:.2f}")
-        print(f"    Usable memory: {usable_mem:.2f}")
+        logger.info(f"{d} device properties (GiB): ")
+        logger.info(f"    Total memory: {t:.2f}")
+        logger.info(f"    Reserved memory: {r:.2f}")
+        logger.info(f"    Allocated memory: {a:.2f}")
+        logger.info(f"    Free memory: {f:.2f}")
+        logger.info(f"    Model size: {model_size:.2f}")
+        logger.info(f"    Usable memory: {usable_mem:.2f}")
     else: 
         usable_mem = None 
         
@@ -95,9 +98,9 @@ def autobatch(
         
         try:
             mem_used = profile_memory(imgs, model, device)
-            print(f"Testing batch_size={bs}, mem={mem_used:.2f}GB")
+            logger.info(f"Testing batch_size={bs}, mem={mem_used:.2f}GB")
         except Exception as e:
-            print(f"  Error profiling batch_size={bs}: {e}")
+            logger.error(f"  Error profiling batch_size={bs}: {e}")
             continue
             
         if usable_mem and mem_used <= usable_mem:
@@ -107,5 +110,5 @@ def autobatch(
     if best_batch is None:
         raise NoValidAutobatchConfigException(usable_mem)
 
-    print(f"Best batch size found:{best_batch}")
+    logger.info(f"Best batch size found:{best_batch}")
     return best_batch 

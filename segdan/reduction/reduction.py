@@ -1,11 +1,14 @@
 import os
 import shutil
 import json
+import logging
 
 from segdan.utils.constants import ReductionMethods
 from segdan.extensions.extensions import LabelExtensions
 from segdan.utils.imagelabelutils import ImageLabelUtils
 from segdan.reduction.reduction_strategies import fast_vote_K, reduce_clusters
+
+logger = logging.getLogger(__name__)
 
 def save_labels_subset(image_dir, image_files, labels_dir, label_extension, output_path):
 
@@ -36,7 +39,7 @@ def reduce_JSON(file, image_files, output_path):
     with open(output_path, 'w') as f:
         json.dump(reduced_data, f, indent=4)
 
-def reduce_dataset(config, clustering_results, evaluation_metric, dataset, label_path, embeddings_dict, output_path, verbose, logger):
+def reduce_dataset(config, clustering_results, evaluation_metric, dataset, label_path, embeddings_dict, output_path, verbose):
     retention_percentage = config.get('retention_percentage')
     use_reduced = config.get('use_reduced')
     method = config.get('reduction_type')
@@ -48,7 +51,7 @@ def reduce_dataset(config, clustering_results, evaluation_metric, dataset, label
         reduced_ds = fast_vote_K(embeddings_dict=embeddings_dict, retention_percentage=retention_percentage, dataset=dataset, output_dir=output_path)
     else:
         reduced_ds = reduce_clusters(config=config, dataset=dataset, embeddings_dict=embeddings_dict, retention_percentage=retention_percentage, 
-                                     clustering_results=clustering_results, evaluation_metric=evaluation_metric, logger=logger, output_path=output_path,
+                                     clustering_results=clustering_results, evaluation_metric=evaluation_metric, output_path=output_path,
                                      verbose=verbose)
 
     if use_reduced and label_path:

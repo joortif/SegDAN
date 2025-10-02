@@ -3,13 +3,17 @@ from segdan.converters.converterfactory import ConverterFactory
 from segdan.utils.imagelabelutils import ImageLabelUtils
 
 from imagedatasetanalyzer import ImageLabelDataset, ImageDataset
+
+import logging
 import os 
+
+logger = logging.getLogger(__name__)
 
 def convert_to_mask(label_path, image_path, input_format, general_data, output_path, converter_factory):
     transformations_path = os.path.join(output_path, "transformations", LabelFormat.MASK.value)
     os.makedirs(transformations_path, exist_ok=True)
 
-    print(f"Transforming labels from {input_format} to multilabel. Results are saved in {transformations_path}")
+    logger.info(f"Transforming labels from {input_format} to multilabel. Results are saved in {transformations_path}")
 
     context = {
         "input_data": label_path,
@@ -27,14 +31,14 @@ def _analyze_and_save_results(dataset: ImageDataset, output_path: str, verbose: 
     analysis_result_path = os.path.join(output_path, "analysis")
     os.makedirs(analysis_result_path, exist_ok=True)
 
-    print("Calculating image sizes...")
+    logger.info("Calculating image sizes...")
     height_mode, width_mode = dataset.image_sizes()
 
     if dataset.label_dir is not None:
-        print("Starting dataset analysis...")
+        logger.info("Starting dataset analysis...")
         dataset.analyze(output=analysis_result_path, verbose=verbose)
 
-    print(f"Dataset analysis ended successfully. Results saved in {analysis_result_path}")
+    logger.info(f"Dataset analysis ended successfully. Results saved in {analysis_result_path}")
 
     return height_mode, width_mode
 

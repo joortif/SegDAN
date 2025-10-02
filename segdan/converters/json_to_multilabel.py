@@ -1,14 +1,17 @@
+import json
+import os
+from tqdm import tqdm
+import cv2
+import numpy as np
+import logging
+
 from typing import Optional
 from segdan.models.depthestimator import DepthEstimator
 from segdan.utils.imagelabelutils import ImageLabelUtils
 from segdan.utils.utils import Utils
 from segdan.converters.converter import Converter
 
-import json
-import os
-from tqdm import tqdm
-import cv2
-import numpy as np
+logger = logging.getLogger(__name__)
 
 class JSONToMultilabelConverter(Converter):
 
@@ -30,7 +33,7 @@ class JSONToMultilabelConverter(Converter):
         transformed_masks = []
 
         data = self._read_json(self.input_data)
-        device = Utils.get_device(self.logger)
+        device = Utils.get_device()
         depth_estimator = DepthEstimator(self.depth_model, device)
 
         for img_info in tqdm(data['images'], desc="Converting labels from JSON COCO format to multilabel..."):
@@ -40,7 +43,7 @@ class JSONToMultilabelConverter(Converter):
             image_path = os.path.join(self.img_dir, img_filename)
 
             if not os.path.exists(image_path):
-                print(f"Image {img_filename} not found, skipping...")
+                logger.info(f"Image {img_filename} not found, skipping...")
                 continue
 
             depth_map = depth_estimator.generate_depth_map(image_path)

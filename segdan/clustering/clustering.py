@@ -1,11 +1,15 @@
+import os
+import logging
+
 from segdan.clustering.clusteringmodel import ClusteringModel
 from segdan.clustering.clusteringfactory import ClusteringFactory
 from segdan.clustering.embeddingfactory import EmbeddingFactory
 
 from imagedatasetanalyzer import ImageDataset
-import os
 
-def get_embeddings(clustering_data:dict, dataset:ImageDataset, verbose:bool, logger = None):
+logger = logging.getLogger(__name__)
+
+def get_embeddings(clustering_data:dict, dataset:ImageDataset, verbose:bool):
     
     emb_factory = EmbeddingFactory()
 
@@ -14,7 +18,7 @@ def get_embeddings(clustering_data:dict, dataset:ImageDataset, verbose:bool, log
     emb_model = emb_factory.get_embedding_model(embedding_info)
 
     if verbose:
-        logger.info(f"Successfully loaded {embedding_info.get('name') or 'LBP'} model from {embedding_info.get('framework')}.")
+        logger.info(f"Successfully loaded {embedding_info.get('name') or embedding_info.get('framework')} model.")
 
     embeddings = emb_model.generate_embeddings(dataset)
 

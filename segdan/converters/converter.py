@@ -3,6 +3,8 @@ import numpy as np
 import logging
 from transformers.utils import logging as hf_logging
 
+logger = logging.getLogger(__name__)
+
 class Converter():
 
     def __init__(self, input_data: str, output_dir: str):
@@ -11,14 +13,6 @@ class Converter():
         self.output_dir = output_dir
         
         hf_logging.set_verbosity_error()
-
-        self.logger = logging.getLogger(self.__class__.__name__)
-        if not self.logger.hasHandlers(): 
-            handler = logging.StreamHandler()
-            formatter = logging.Formatter('%(levelname)s - %(message)s', datefmt='%H:%M:%S')
-            handler.setFormatter(formatter)
-            self.logger.addHandler(handler)
-            self.logger.setLevel(logging.INFO)
 
     def _create_empty_mask(self, height: int, width: int, fill_background: Optional[int]):
 

@@ -5,9 +5,12 @@ import os
 import random
 from tqdm import tqdm
 import matplotlib.pyplot as plt
+import logging
 
 from segdan.converters.converter import Converter
 from segdan.utils.imagelabelutils import ImageLabelUtils
+
+logger = logging.getLogger(__name__)
 
 class ColorToMultilabelConverter(Converter):
 
@@ -66,9 +69,9 @@ class ColorToMultilabelConverter(Converter):
                     if color_id not in assigned_colors.values():
                         assigned_colors[color] = color_id
                         break
-                    print(f"Invalid input. Class ID already assigned.")
+                    logger.error(f"Invalid input. Class ID already assigned.")
                 except ValueError:
-                    print("Invalid input. Please enter a valid integer ID.")
+                    logger.error("Invalid input. Please enter a valid integer ID.")
             plt.close()  
             
         return assigned_colors
@@ -80,7 +83,7 @@ class ColorToMultilabelConverter(Converter):
         label_files = [f for f in os.listdir(self.input_data) if os.path.isfile(os.path.join(self.input_data, f))]
 
         if self.color_dict is None:
-            print("No color dictionary found. It will be created automatically...")
+            logger.info("No color dictionary found. It will be created automatically...")
             self.color_dict = self.generate_color_dict(self.input_data)
 
         for filename in tqdm(label_files, desc="Converting labels from color format to multilabel..."):

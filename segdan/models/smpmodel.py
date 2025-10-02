@@ -1,4 +1,5 @@
 import os
+import logging
 from typing import Optional
 import pytorch_lightning as pl
 import segmentation_models_pytorch as smp
@@ -10,6 +11,8 @@ import pandas as pd
 
 from segdan.metrics.compute_metrics import compute_metrics
 from segdan.models.semanticsegmentationmodel import SemanticSegmentationModel
+
+logger = logging.getLogger(__name__)
 
 class SMPModel(pl.LightningModule, SemanticSegmentationModel):
     def __init__(self, in_channels: int , classes: int, metrics: np.ndarray, imgsz:int, selection_metric: str, epochs:int, t_max: Optional[int], output_path:str, 
@@ -160,7 +163,7 @@ class SMPModel(pl.LightningModule, SemanticSegmentationModel):
     def save_metrics(self,trainer, dataloader, experiment_name, filename, training_time=None):
         metrics = trainer.test(dataloaders=dataloader)
         if not metrics:
-            print("No metrics to save.")
+            logger.warning("No metrics to save.")
             return metrics
 
         metrics_dict = metrics[0]  
@@ -182,7 +185,7 @@ class SMPModel(pl.LightningModule, SemanticSegmentationModel):
 
         self.show_metrics(metrics_dict, "Test")  
 
-        print(f"Metrics saved in file {file_output_path}")
+        logger.info(f"Metrics saved in file {file_output_path}")
 
         evaluation_metric = metrics_dict.get(f"{self.selection_metric}_test")
         return evaluation_metric
@@ -193,7 +196,7 @@ class SMPModel(pl.LightningModule, SemanticSegmentationModel):
         trainer.fit(self, train_dataloaders=train_loader, val_dataloaders=valid_loader)
         end_time = time.time()
         total_time = end_time - start_time
-        print(f"Total training time: {total_time / 60:.2f} minutes")
+        logger.info(f"Total training time: {total_time / 60:.2f} minutes")
 
         if valid_loader is not None:
             valid_metrics = trainer.validate(self, dataloaders=valid_loader, verbose=False)

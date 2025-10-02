@@ -4,6 +4,7 @@ import os
 import shutil
 import json
 from tqdm import tqdm
+import logging
 
 from skmultilearn.model_selection import IterativeStratification
 from sklearn.model_selection import KFold, train_test_split
@@ -13,6 +14,8 @@ from sklearn.utils import shuffle
 from segdan.stratification.stratification_fn import calculate_object_number, calculate_pixel_ratio, calculate_pixel_distribution
 from segdan.utils.constants import StratificationStrategy
 from segdan.utils.confighandler import ConfigHandler
+
+logger = logging.getLogger(__name__)
 
 class TrainingDataset():
 
@@ -59,10 +62,8 @@ class TrainingDataset():
         used_val_indices = set()
         folds = []
 
-        for fold_idx, (train_idx, val_idx) in tqdm(enumerate(kfold.split(X=np.zeros(len(image_paths)), 
-                                                                      y=distributions)), 
-                                           total=kfold.get_n_splits(), 
-                                           desc="Processing folds"):
+        for fold_idx, (train_idx, val_idx) in enumerate(kfold.split(X=np.zeros(len(image_paths)), 
+                                                                      y=distributions)):
 
             if any(idx in used_val_indices for idx in val_idx):
                 raise ValueError(f"Duplicate indices found in fold {fold_idx + 1} for the validation set.")
@@ -100,7 +101,7 @@ class TrainingDataset():
             if df is None:
                 continue
 
-            print(f"Saving {subset} split...")
+            logger.info(f"Saving {subset} split...")
 
             img_dir = os.path.join(output_path, subset, "images")
             label_dir = os.path.join(output_path, subset, "labels")
@@ -132,7 +133,7 @@ class TrainingDataset():
             with open(os.path.join(label_dir, f"{subset}.json"), "w") as f:
                 json.dump(coco_subset, f, separators=(',', ':'))
 
-        print(f"Splits successfully saved in {output_path}")
+        logger.info(f"Splits successfully saved in {output_path}")
         
     def split(self, general_data: dict, split_data: dict):
 
@@ -196,7 +197,7 @@ class TrainingDataset():
         """
         image_paths, mask_paths = shuffle(self.image_files, self.mask_paths_multilabel, random_state=random_state)
 
-        print("Starting classes stratification...")
+        logger.info("Starting classes stratification...")
         if stratification_strategy.lower() == StratificationStrategy.PIXELS.value:
             result = calculate_pixel_distribution(mask_paths, background)
         elif stratification_strategy.lower() == StratificationStrategy.OBJECTS.value:
@@ -207,7 +208,7 @@ class TrainingDataset():
         distributions = result["distributions"]
         num_classes = result["num_classes"]
 
-        print(f"Stratification done. {num_classes} classes detected.")
+        logger.info(f"Stratification done. {num_classes} classes detected.")
         
         stratifier = IterativeStratification(
             n_splits=2,
@@ -291,7 +292,7 @@ class TrainingDataset():
         num_classes = None
 
         if not stratify:
-            print("Saving splits...")
+            logger.info("Saving splits...")
 
             kfold = KFold(n_splits=n_splits, shuffle=True, random_state=random_state)
 
@@ -299,7 +300,7 @@ class TrainingDataset():
                 
             return num_classes
 
-        print("Starting stratification...")
+        logger.info("Starting stratification...")
 
         if stratification_strategy.lower() == StratificationStrategy.PIXELS.value:
             result = calculate_pixel_distribution(mask_paths, background)
@@ -311,7 +312,7 @@ class TrainingDataset():
         distributions = result["distributions"]
         num_classes = result["num_classes"]
 
-        print(f"Stratification done. {num_classes} classes detected.")
+        logger.info(f"Stratification done. {num_classes} classes detected.")
 
         stratifier = IterativeStratification(
             n_splits=n_splits,

@@ -35,7 +35,7 @@ class YOLOToMultilabelConverter(Converter):
 
         converted_masks = []
         labels = os.listdir(self.input_data)
-        device = Utils.get_device(self.logger)
+        device = Utils.get_device()
         depth_estimator = DepthEstimator(self.depth_model, device)
 
         for label_name in tqdm(labels, desc="Converting labels from TXT YOLO format to multilabel..."):

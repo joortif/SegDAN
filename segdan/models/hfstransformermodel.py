@@ -1,3 +1,6 @@
+import os
+import logging
+
 from functools import partial
 import time
 
@@ -16,7 +19,7 @@ from segdan.metrics.compute_metrics import compute_metrics
 from segdan.models.semanticsegmentationmodel import SemanticSegmentationModel
 from segdan.trainers.hfsegmentationtrainer import HFSegmentationTrainer
 
-import os
+logger = logging.getLogger(__name__)
 
 class HFTransformerModel(SemanticSegmentationModel):
 
@@ -166,7 +169,7 @@ class HFTransformerModel(SemanticSegmentationModel):
         metrics = trainer.predict(test_dataset=dataloader)
         
         if not metrics:
-            print("No metrics to save.")
+            logger.warning("No metrics to save.")
             return metrics
 
         df = pd.DataFrame(metrics)
@@ -182,7 +185,7 @@ class HFTransformerModel(SemanticSegmentationModel):
             df_combined = df
 
         df_combined.to_csv(filename, sep=';', index=False)
-        print(f"Metrics saved in file {filename}")
+        logger.info(f"Metrics saved in file {filename}")
 
         evaluation_metric = metrics[0].get(f"test_{self.selection_metric}")
         return evaluation_metric
@@ -223,11 +226,11 @@ class HFTransformerModel(SemanticSegmentationModel):
         trainer.train()
         end_time = time.time()
         total_time = end_time - start_time
-        print(f"Total training time: {total_time / 60:.2f} minutes")
+        logger.info(f"Total training time: {total_time / 60:.2f} minutes")
         
         if valid_dataset:
             valid_metrics = trainer.evaluate(eval_dataset=valid_dataset)
-            print(valid_metrics)
+            logger.info(valid_metrics)
         
         trainer.compute_metrics = partial(self.compute_semantic_metrics, stage="test")
         evaluation_metric = self.save_metrics(trainer, test_dataset, f"{self.model_name.capitalize()} - {self.model_size.capitalize()}.csv", os.path.join(self.output_path, "metrics.csv"), 

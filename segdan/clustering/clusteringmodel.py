@@ -1,8 +1,11 @@
 import numpy as np
+import logging
 
 from segdan.utils.utils import Utils
 from segdan.metrics.clusteringmetrics import get_scoring_function
 from segdan.utils.constants import ClusteringModelName
+
+logger = logging.getLogger(__name__)
 
 class ClusteringModel():
 
@@ -46,7 +49,7 @@ class ClusteringModel():
 
     def train(self, model_name, verbose: bool):
 
-        print(f"Using {model_name} model for clustering image embeddings...")
+        logger.info(f"Using {model_name} model for clustering image embeddings...")
 
         scoring_function = get_scoring_function(self.metric)
 

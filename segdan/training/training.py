@@ -1,4 +1,5 @@
 import os
+import logging
 from typing import Optional 
 import numpy as np
 from torch.utils.data import DataLoader
@@ -10,11 +11,11 @@ from segdan.models.hfstransformermodel import HFTransformerModel
 from segdan.datasets.hfdataset import HuggingFaceAdapterDataset
 from segdan.datasets.smpdataset import SMPDataset
 
-
 from segdan.utils.confighandler import ConfigHandler
 from segdan.utils.utils import Utils
 from segdan.datasets.augments import get_training_augmentation, get_validation_augmentation
 
+logger = logging.getLogger(__name__)
 
 smp_models_lower = [name.lower() for name in ConfigHandler.SEMANTIC_SEGMENTATION_MODELS["smp"]]
 hf_models_lower = [name.lower() for name in ConfigHandler.SEMANTIC_SEGMENTATION_MODELS["hf"]]
@@ -111,12 +112,12 @@ def semantic_model_training(epochs: int, imgsz:int, evaluation_metrics: np.ndarr
 
                 model.t_max = epochs * len(train_loader)
                 
-            print(f"Training {model_name} - {model_size}...")
+            logger.info(f"Training {model_name} - {model_size}...")
                 
             evaluation_metric, candidate_path = model.run_training(train_loader, val_loader, test_loader)
 
             if evaluation_metric > best_metric:
-                print(f"New best model found: {model_name} with {selection_metric} score of {evaluation_metric}")
+                logger.info(f"New best model found: {model_name} with {selection_metric} score of {evaluation_metric}")
 
                 if best_model_path and os.path.exists(best_model_path):
                     os.remove(best_model_path)
@@ -128,7 +129,7 @@ def semantic_model_training(epochs: int, imgsz:int, evaluation_metrics: np.ndarr
                 if os.path.exists(candidate_path):
                     os.remove(candidate_path)
                     
-            print(f"Best model: {best_model_name}")
-            print(f"{selection_metric.capitalize()} score: {best_metric}")
+            logger.info(f"Best model: {best_model_name}")
+            logger.info(f"{selection_metric.capitalize()} score: {best_metric}")
 
     return best_model_path  

@@ -30,7 +30,7 @@ install_reqs = remove_requirements(install_reqs, ['torch', 'torchvision', 'torch
 setup(
     name = 'segdan',
 
-    version = '0.1.5',
+    version = '0.1.6',
 
     author = 'Joaquin Ortiz de Murua Ferrero',
     author_email = 'joortif@unirioja.es',

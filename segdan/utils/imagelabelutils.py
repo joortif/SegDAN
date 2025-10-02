@@ -1,4 +1,5 @@
 import os
+import logging
 from typing import Optional
 import cv2
 import numpy as np
@@ -9,6 +10,8 @@ from tqdm import tqdm
 from segdan.exceptions.exceptions import ExtensionNotFoundException
 from segdan.extensions.extensions import LabelExtensions
 from segdan.utils.confighandler import ConfigHandler
+
+logger = logging.getLogger(__name__)
 
 class ImageLabelUtils:
 
@@ -59,7 +62,7 @@ class ImageLabelUtils:
             return None
 
     @staticmethod
-    def check_label_extensions(label_dir, verbose=False, logger=None):
+    def check_label_extensions(label_dir, verbose=False):
         """
         Checks the extensions of label files in the label directory to ensure consistency.
 
@@ -91,7 +94,7 @@ class ImageLabelUtils:
                     return LabelExtensions.enumToExtension(enum_ext)
                 
             except ExtensionNotFoundException as e:
-                print(f"All labels are in unknown {ext} format.")
+                logger.error(f"All labels are in unknown {ext} format.")
                 raise e
         else:
             raise ValueError(f"The directory contains multiple extensions for labels: {labels_ext}.")
