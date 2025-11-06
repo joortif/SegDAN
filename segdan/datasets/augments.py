@@ -45,7 +45,10 @@ def get_training_augmentation(resize_height = 512, resize_width=512, background=
         A.CoarseDropout(num_holes_range=(1,8), hole_height_range=(8,32), hole_width_range=(8,32), fill=background, fill_mask=background, p=0.3),
         A.GridDistortion(p=0.2),
     ]
-    return A.Compose(train_transform)
+
+    augment = A.Compose(train_transform)
+    augment.background = background
+    return augment
 
 
 def get_validation_augmentation(resize_height = 512, resize_width=512, background=None):
@@ -56,4 +59,7 @@ def get_validation_augmentation(resize_height = 512, resize_width=512, backgroun
        A.Resize(height=resize_height, width=resize_width),
        A.PadIfNeeded(min_height=None, min_width=None, pad_height_divisor=32, pad_width_divisor=32, fill=background, fill_mask=background)
     ]
-    return A.Compose(test_transform)
+
+    augment = A.Compose(test_transform)
+    augment.background = background
+    return augment

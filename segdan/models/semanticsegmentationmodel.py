@@ -4,15 +4,18 @@ import numpy as np
 import torch
 import re
 import logging
+import pandas as pd
 
 from segdan.exceptions.exceptions import NoValidAutobatchConfigException
 from segdan.training.autobatch import autobatch
+from utils.utils import Utils
 
 logger = logging.getLogger(__name__)
 
 class SemanticSegmentationModel:
 
-    def __init__(self, classes: np.ndarray, epochs:int, imgsz:int, metrics: np.ndarray, selection_metric: str, model_name:str, model_size:str, output_path:str, fraction:Optional[float]=0.6):
+    def __init__(self, classes: np.ndarray, epochs:int, imgsz:int, metrics: np.ndarray, selection_metric: str, model_name:str, 
+                 model_size:str, output_path:str, val_fold: Optional[int] = None, fraction:Optional[float]=0.6):
         
         self.classes = classes
         self.out_classes = len([cls for cls in self.classes if cls.lower() !="background"])
@@ -25,10 +28,20 @@ class SemanticSegmentationModel:
         self.output_path = output_path
         self.fraction = fraction
 
+        if val_fold:
+            self.val_fold=str(val_fold)
+
         self.lr = 2e-4
 
     def save_model(self, output_dir, weights_only=True):
-        model_save_name = f"{self.model_name}-{self.model_size}-ep{self.epochs}.pth"
+        if not os.path.exists(output_dir):
+            os.makedirs(output_dir, exist_ok=True)
+        
+        model_save_name = f"{self.model_name}-{self.model_size}-ep{self.epochs}"
+        if self.val_fold is not None:
+            model_save_name += f"-fold{self.val_fold}"
+        model_save_name += ".pt"
+        
         output_path = os.path.join(output_dir,model_save_name)
 
         if weights_only:
@@ -77,7 +90,6 @@ class SemanticSegmentationModel:
                     logger.info(f"Class {c:<2} : {'N/A':>8}")
             logger.info()
 
-
     def autobatch_imgsz(self):
         device = next(self.model.parameters()).device
 
@@ -92,6 +104,38 @@ class SemanticSegmentationModel:
         if self.batch < 16:
             self.lr = 2e-5
             logger.info(f"Reducing learning rate to {self.lr}")
+
+    def save_metrics(self, metrics, experiment_name, filename, hf=False, training_time=None):
+        if not metrics:
+            print("No metrics to save.")
+            return metrics
+
+        metrics_dict = metrics  
+        if hf:
+            metrics_dict = Utils.adapt_hf_metrics(metrics_dict)
+        
+        df = pd.DataFrame([metrics_dict])  
+        df.insert(0, "Experiment", experiment_name)  
+        
+        if training_time is not None:
+            df["Training Time (min)"] = round(training_time / 60.0, 2)
+
+        if os.path.exists(filename):
+            df_existing = pd.read_csv(filename, sep=';')
+            df_combined = pd.concat([df_existing, df], ignore_index=True)
+        else:
+            df_combined = df
+
+        file_output_path = os.path.join(os.path.dirname(self.output_path), filename)
+        if os.path.exists(file_output_path):
+            df.to_csv(file_output_path, sep=';', mode='a', header=False, index=False)
+        else:
+            df.to_csv(file_output_path, sep=';', index=False)  
+
+        print(f"Metrics saved in file {file_output_path}")
+
+        evaluation_metric = metrics_dict.get(f"{self.selection_metric}_test")
+        return evaluation_metric
         
     def run_training():
         raise NotImplementedError("Subclasses must implement this method") 

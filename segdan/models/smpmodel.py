@@ -55,8 +55,6 @@ class SMPModel(pl.LightningModule, SemanticSegmentationModel):
         self.validation_step_outputs = []
         self.test_step_outputs = []
 
-        self.autobatch_imgsz()
-
     def forward(self, image):
         # Normalize image
         image = (image - self.mean) / self.std
@@ -103,8 +101,7 @@ class SMPModel(pl.LightningModule, SemanticSegmentationModel):
             metric_args = {"mode": "binary"}
         else:
             metric_args = {"mode": "multiclass", "num_classes": self.number_of_classes}
-
-        metric_args["ignore_index"] = 255
+            metric_args["ignore_index"] = 255
 
         tp, fp, fn, tn = smp.metrics.get_stats(pred_mask.long(), mask.long(), **metric_args)
                 
@@ -189,20 +186,28 @@ class SMPModel(pl.LightningModule, SemanticSegmentationModel):
 
         evaluation_metric = metrics_dict.get(f"{self.selection_metric}_test")
         return evaluation_metric
+    
+    def init_trainer(self, train_loader, valid_loader, test_loader):
+        self.trainer = pl.Trainer(max_epochs=self.epochs, log_every_n_steps=1)
 
-    def run_training(self, train_loader, valid_loader, test_loader):
+        self.train_loader = train_loader
+        self.valid_loader = valid_loader
+        self.test_loader = test_loader 
+
+
+    def run_training(self):
         trainer = pl.Trainer(max_epochs=self.epochs, log_every_n_steps=1)
         start_time = time.time()
-        trainer.fit(self, train_dataloaders=train_loader, val_dataloaders=valid_loader)
+        trainer.fit(self, train_dataloaders=self.train_loader)
         end_time = time.time()
         total_time = end_time - start_time
         logger.info(f"Total training time: {total_time / 60:.2f} minutes")
 
-        if valid_loader is not None:
-            valid_metrics = trainer.validate(self, dataloaders=valid_loader, verbose=False)
+        if self.valid_loader is not None:
+            valid_metrics = trainer.validate(self, dataloaders=self.valid_loader, verbose=False)
             self.show_metrics(valid_metrics[0], "Validation")
 
-        evaluation_metric = self.save_metrics(trainer, test_loader, f"{self.model_name} - {self.model_size}", f"metrics_{self.model_name}.csv", training_time=total_time)
+        evaluation_metric = self.save_metrics(trainer, self.test_loader, f"{self.model_name} - {self.model_size}", f"metrics_{self.model_name}.csv", training_time=total_time)
         model_output_path = self.save_model(self.output_path, weights_only=False)
 
         return evaluation_metric, model_output_path

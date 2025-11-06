@@ -1,3 +1,6 @@
+import os
+import shutil
+from typing import Optional
 import torch
 import logging
 import cv2
@@ -62,3 +65,44 @@ class Utils():
             logger.info(f"Images will be resized to {mode_height}px height and {mode_width}px width.")
             
         return mode_height
+    
+    def adapt_hf_metrics(metrics):
+    
+        #REMOVE COLUMNS
+        columns_to_delete = ["epoch", "steps_per_second", "samples_per_second", "runtime", "loss"]
+
+        keys_to_delete = [
+            key for key in metrics.keys()
+            if any(sub in key for sub in columns_to_delete)
+        ]    
+        
+        for key in keys_to_delete:
+            del metrics[key]
+            
+        #FORMAT NAMES
+        new_metrics = {}
+        for key, value in metrics.items():
+            
+            if key.startswith("eval_"):
+                new_key = key[len("eval_"):]
+            else:
+                new_key = key
+            
+            new_metrics[new_key] = value
+        
+        new_metrics = {(key.replace("eval", "test")): value
+                    for key, value in new_metrics.items()}
+        
+        return new_metrics
+    
+    def safe_remove(path: Optional[str]):
+        if not path:
+            return
+        try:
+            if os.path.exists(path):
+                if os.path.isdir(path):
+                    shutil.rmtree(path)
+            else:
+                os.remove(path)
+        except Exception as e:
+            logger.warning(f"Could not remove {path}: {e}")

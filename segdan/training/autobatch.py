@@ -1,11 +1,47 @@
 import os
+from typing import Any, Callable, Optional
 import torch
 import logging
+
+from transformers import OneFormerProcessor
 
 from segdan.exceptions.exceptions import NoValidAutobatchConfigException
 import segdan.utils.constants
 
 logger = logging.getLogger(__name__)
+
+def _extract_first_tensor(obj):
+    if obj is None:
+        return None
+    if torch.is_tensor(obj):
+        return obj
+    if isinstance(obj, dict):
+        for v in obj.values():
+            t = _extract_first_tensor(v)
+            if t is not None:
+                return t
+    if isinstance(obj, (list, tuple)):
+        for v in obj:
+            t = _extract_first_tensor(v)
+            if t is not None:
+                return t
+    for attr in ["logits", "out", "preds", "class_queries_logits", "masks_queries_logits", "last_hidden_state"]:
+        if hasattr(obj, attr):
+            v = getattr(obj, attr)
+            if torch.is_tensor(v) or (isinstance(v, (list, tuple, dict)) and _extract_first_tensor(v) is not None):
+                return _extract_first_tensor(v)
+    return None
+
+def _tensorlist_to_hwc_numpy_list(tensor: torch.Tensor):
+    # tensor: (B, C, H, W) o (C, H, W)
+    if tensor.dim() == 4:
+        # Batch
+        return [img.permute(1, 2, 0).cpu().numpy() for img in tensor]
+    elif tensor.dim() == 3:
+        # Single image
+        return [tensor.permute(1, 2, 0).cpu().numpy()]
+    else:
+        raise ValueError("3D or 4D tensor expected")
 
 def calculate_model_size(model: torch.nn.Module):
     param_size = 0
@@ -20,30 +56,126 @@ def calculate_model_size(model: torch.nn.Module):
     return total_size_gb
     
 
-def profile_memory(img, model, device=None):
+def profile_memory(
+    img: Any,
+    model: torch.nn.Module,
+    loss_fn: Optional[Callable[[torch.Tensor, torch.Tensor], torch.Tensor]] = smp.losses.DiceLoss,
+    device: Optional[torch.device] = None,
+    processor = None,
+    verbose: bool = True
+) -> float:
     if device is None:
-        device = next(model.parameters()).device
+        try:
+            device = next(model.parameters()).device
+        except StopIteration:
+            device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+    gb = 1 << 30
+
+    model.to(device)
     model.train()
     
-    gb = 1 << 30
+    torch.cuda.empty_cache()
+    torch.cuda.reset_peak_memory_stats(device)
+
+    model.zero_grad(set_to_none=True)
     
-    optimizer = torch.optim.Adam(model.parameters(), lr=2e-4)
+    try:
+        inputs_for_processor = img
 
-    torch.cuda.empty_cache()
-    torch.cuda.reset_peak_memory_stats(device)
+        if processor is not None:
+            args = {
+                "images": inputs_for_processor,
+                "do_resize": False,
+                "do_normalize": True,
+                "do_rescale": False,
+                "return_tensors": "pt",
+            }
 
-    img = img.to(device)
-    out = model(img)  
-    loss = out.mean()
-    loss.backward()   
-    optimizer.zero_grad(set_to_none=True)
+            # OneFormer specifics
+            if isinstance(processor, OneFormerProcessor):
+                if torch.is_tensor(img):
+                    bs = img.shape[0]
+                else:
+                    bs = len(img)
 
-    torch.cuda.synchronize()
-    mem = torch.cuda.max_memory_allocated(device) / gb
+                args["task_inputs"] = ["semantic"] * bs
+                processor.image_processor.num_text =1
+
+            if torch.is_tensor(inputs_for_processor):
+                images_list = _tensorlist_to_hwc_numpy_list(inputs_for_processor)
+                proc_out = processor(images=images_list, do_resize=False, do_normalize=True, return_tensors="pt")
+            else:
+                proc_out = processor(**args)
             
+            img_device = {}
+            if proc_out is not None:
+                for k, v in proc_out.items():
+                    if torch.is_tensor(v):
+                        img_device[k] = v.to(device)
+                    elif isinstance(v, (list, tuple)):
+                        new_list = []
+                        for elem in v:
+                            if torch.is_tensor(elem):
+                                new_list.append(elem.to(device))
+                            else:
+                                new_list.append(elem)
+                        img_device[k] = new_list
+                    else:
+                        img_device[k] = v
+            
+        outputs = model(**img_device)
+
+    except Exception as e:
+        if verbose:
+            err_name = type(e).__name__
+            if "out of memory" in str(e).lower():
+                try:
+                    batch = img.shape[0]
+                except Exception:
+                    batch = "?"
+                logger.info(f"CUDA OOM in forward (batch {batch})")
+            else:
+                logger.error(f"Forward call failed ({err_name}): {e}")
+        raise e
+    
+    loss = None
+    # HF
+    if hasattr(outputs, "loss") and getattr(outputs, "loss") is not None:
+        loss = outputs.loss
+        if verbose:
+            logger.info("Using outputs.loss from model.")
+    else:
+        # SMP
+        first_tensor = _extract_first_tensor(outputs)
+        if first_tensor is not None and torch.is_tensor(first_tensor):
+            loss = first_tensor.mean()
+            if verbose:
+                logger.info("Using mean(first_tensor) as fallback loss.")
+        else:
+            loss = torch.tensor(0.0, device=device, requires_grad=True)
+            if verbose:
+                logger.info("No tensor found in outputs and no labels/loss_fn provided: using dummy scalar loss.")
+
+    try:
+        loss.backward()
+    except Exception as e:
+        try:
+            loss = loss.float()
+            loss.backward()
+        except Exception:
+            if verbose:
+                logger.error("Backward failed:", e)
+            raise
+
+    torch.cuda.synchronize(device)
+    peak = torch.cuda.max_memory_allocated(device) / gb
+        
+    model.zero_grad(set_to_none=True)
     torch.cuda.empty_cache()
     torch.cuda.reset_peak_memory_stats(device)
-    return mem
+
+    return float(peak)
 
 def autobatch(
     model: torch.nn.Module,
@@ -110,5 +242,5 @@ def autobatch(
     if best_batch is None:
         raise NoValidAutobatchConfigException(usable_mem)
 
-    logger.info(f"Best batch size found:{best_batch}")
+    logger.info(f"Best batch size found: {best_batch}")
     return best_batch 

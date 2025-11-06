@@ -3,19 +3,14 @@ import logging
 
 from functools import partial
 import time
-
+import transformers
 from transformers import Mask2FormerForUniversalSegmentation, MaskFormerForInstanceSegmentation, OneFormerForUniversalSegmentation, MaskFormerImageProcessor, OneFormerImageProcessor, OneFormerProcessor
 from transformers import TrainingArguments
 
+from packaging import version
 import torch
-import torch.nn.functional as F
 
-import segmentation_models_pytorch as smp
-import numpy as np
-
-import pandas as pd
-
-from segdan.metrics.compute_metrics import compute_metrics
+from models.callbacks import SaveWeightsCallbackHF
 from segdan.models.semanticsegmentationmodel import SemanticSegmentationModel
 from segdan.trainers.hfsegmentationtrainer import HFSegmentationTrainer
 
@@ -41,8 +36,8 @@ class HFTransformerModel(SemanticSegmentationModel):
         },
     }
 
-    def __init__(self, model_name, model_size, out_classes, metrics, selection_metric, epochs, imgsz, output_path, fraction):
-        super.__init__(self, out_classes=out_classes, epochs=epochs, imgsz=imgsz, metrics=metrics, selection_metric=selection_metric, 
+    def __init__(self, model_name, model_size, classes, metrics, selection_metric, epochs, imgsz, output_path, fraction):
+        super.__init__(self, classes=classes, epochs=epochs, imgsz=imgsz, metrics=metrics, selection_metric=selection_metric, 
                        model_name=model_name, model_size=model_size, output_path=output_path, fraction=fraction)
         
         if self.model_name not in self.MODEL_CONFIGS:
@@ -53,8 +48,7 @@ class HFTransformerModel(SemanticSegmentationModel):
         
         self.model = config["model_class"].from_pretrained(pretrained_name, num_labels=self.out_classes, ignore_mismatched_sizes=True)
         self.feature_extractor = config["processor_class"].from_pretrained(pretrained_name, do_resize=False, use_fast=True)
-
-        self.autobatch_imgsz()
+        self.id2label = {i:classes[i] for i in range(len(classes))}
 
     def huggingface_collate_fn(self, batch):
         images, masks = zip(*batch)
@@ -71,7 +65,7 @@ class HFTransformerModel(SemanticSegmentationModel):
 
         if isinstance(self.feature_extractor, OneFormerProcessor):
             kwargs["task_inputs"] = ["semantic"] * len(images)
-            self.feature_extractor.image_processor.num_text = 65
+            self.feature_extractor.image_processor.num_text = 1
 
         encoded_inputs = self.feature_extractor(**kwargs)
         
@@ -87,156 +81,83 @@ class HFTransformerModel(SemanticSegmentationModel):
             
         return result
 
-    def compute_semantic_metrics(self, eval_pred, stage):
-        predictions, label_ids = eval_pred
-        
-        class_logits = torch.from_numpy(predictions[0])      
-        masks_q      = torch.from_numpy(predictions[1])    
-        
-        masks_tensor = torch.tensor(np.array(label_ids[0][0])).bool() 
-        classes_tensor = torch.tensor(np.array(label_ids[1][0]))
-        
-        batch_size = class_logits.shape[0]
-        _, H_gt, W_gt = masks_tensor.shape
-        
-        if self.out_classes == 1:
-            probs = torch.softmax(class_logits, dim=-1)[..., 1]
-            raw_mask = (probs[:, :, None, None] * masks_q).sum(dim=1)
+    def init_trainer(self, train_dataset, valid_dataset, test_dataset):
 
-            gt_masks = []
-            pred_masks = []
-
-            for i in range(batch_size):
-                gt_mask = torch.zeros_like(masks_tensor[i, 0])
-                for m, c in zip(masks_tensor, classes_tensor):
-                    if c.item() == 1:
-                        gt_mask |= m
-                gt_masks.append(gt_mask)
-
-                pred = F.interpolate(
-                    raw_mask[i].unsqueeze(0).unsqueeze(0),  
-                    size=gt_mask.shape,
-                    mode="bilinear",
-                    align_corners=False
-                ).squeeze()
-                pred_masks.append((pred.sigmoid() > 0.5).bool())
-            
-            pred_masks_array = torch.stack(pred_masks)
-            gt_masks_array = torch.stack(gt_masks)
-                
-            tp, fp, fn, tn = smp.metrics.get_stats(pred_masks_array, gt_masks_array, mode="binary")
-        
-        else:     
-            probs = torch.softmax(class_logits, dim=-1)
-            raw_mask = torch.einsum('bmc,bmhw->bchw', probs, masks_q)
-            
-            gt_masks_array = torch.zeros((batch_size, self.out_classes, H_gt, W_gt), dtype=torch.bool)
-
-            for i in range(batch_size):
-                for m, c in zip(masks_tensor, classes_tensor):
-                    m = m.float().unsqueeze(0).unsqueeze(0)
-                    m = F.interpolate(m, size=(H_gt, W_gt), mode="nearest").squeeze().bool()
-                    gt_masks_array[i, c] |= m
-
-            pred_classes_mask = raw_mask.argmax(dim=1)  
-            gt_classes_mask = gt_masks_array.float().argmax(dim=1)  
-            
-            pred_classes_mask = F.interpolate(
-                pred_classes_mask.unsqueeze(1).float(),  
-                size=(gt_classes_mask.shape[-2], gt_classes_mask.shape[-1]),
-                mode="nearest"
-            ).squeeze(1).long()
-
-            tp, fp, fn, tn = smp.metrics.get_stats(
-                pred_classes_mask, gt_classes_mask,
-                mode="multiclass",
-                num_classes=self.out_classes,
-                ignore_index=self.ignore_index
-            )
-        
-        statistics = {
-            "tp": tp,
-            "fp": fp,
-            "fn": fn,
-            "tn": tn
-        }
-
-        metric_results = compute_metrics(statistics, self.metrics, stage)
-        
-        return metric_results
-    
-    def save_metrics(self, trainer,dataloader,experiment_name,filename="metrics.csv",training_time=None):
-        metrics = trainer.predict(test_dataset=dataloader)
-        
-        if not metrics:
-            logger.warning("No metrics to save.")
-            return metrics
-
-        df = pd.DataFrame(metrics)
-        df.insert(0, experiment_name)
-
-        if training_time is not None:
-            df["Training Time (min)"] = round(training_time / 60.0, 2)
-
-        if os.path.exists(filename):
-            df_existing = pd.read_csv(filename, sep=';')
-            df_combined = pd.concat([df_existing, df], ignore_index=True)
-        else:
-            df_combined = df
-
-        df_combined.to_csv(filename, sep=';', index=False)
-        logger.info(f"Metrics saved in file {filename}")
-
-        evaluation_metric = metrics[0].get(f"test_{self.selection_metric}")
-        return evaluation_metric
-
-    def run_training(self, train_dataset, valid_dataset, test_dataset):
+        ver = transformers.__version__
+        strategy_key = (
+            "evaluation_strategy" if version.parse(ver) >= version.parse("4.29.0") else "eval_strategy"
+        )
 
         training_args = TrainingArguments(
-        output_dir=self.output_path,          
-        eval_strategy="epoch",
-        learning_rate=5e-5,             
-        per_device_train_batch_size=self.batch,   
-        per_device_eval_batch_size=self.batch,    
-        num_train_epochs=self.epochs,              
-        weight_decay=0.01,               
-        logging_dir=None,            
-        logging_strategy="no",                
-        save_strategy="epoch",
-        save_total_limit=3,
-        eval_steps=50,
-        fp16=True,
-        dataloader_num_workers=4
+            output_dir=self.output_path,          
+            **{strategy_key: "epoch"},
+            learning_rate=5e-5, #self.lr ??            
+            per_device_train_batch_size=self.batch,   
+            per_device_eval_batch_size=self.batch,    
+            num_train_epochs=self.epochs,              
+            weight_decay=0.01,               
+            logging_dir=None,            
+            logging_strategy="no",                
+            save_strategy="no",
+            save_total_limit=3,
+            label_names=["mask_labels"],
+            fp16=True,
+            remove_unused_columns=False,
+            report_to="none"
         )
+
+        data_collator = partial(self.huggingface_collate_fn, processor=self.feature_extractor)
         
-        trainer = HFSegmentationTrainer(
+        self.trainer = HFSegmentationTrainer(
             model=self.model,
             args=training_args,
             train_dataset=train_dataset,
             eval_dataset=valid_dataset,
-            num_classes=len(train_dataset.get_class_map())-1, 
-            ignore_index=255,
-            dice_loss_kwargs={"from_logits":True},
-            data_collator = self.huggingface_collate_fn,
-            compute_metrics=partial(self.compute_semantic_metrics, stage="val")
-
+            test_dataset=test_dataset,
+            num_classes = len(self.id2label),
+            processor=self.feature_extractor,
+            id2label = self.id2label,
+            metric = self.metrics,
+            selection_metric = self.selection_metric,
+            data_collator = data_collator,
+            output_path = self.output_path
         )
 
+        def compute_metrics_wrapper(eval_pred):
+            preds = getattr(eval_pred, "predictions", None)
+            labels = getattr(eval_pred, "label_ids", None)
+
+            return self.trainer.compute_metrics_huggingface_from_pred(preds, labels)
+        
+        self.trainer.compute_metrics = compute_metrics_wrapper
+
+
+    def run_training(self, save_model=False, save_n_ckpts=10, save_last_epochs=False):
+
+        self.trainer.add_callback(SaveWeightsCallbackHF(save_n_ckpts=save_n_ckpts, save_last_epochs=save_last_epochs, output_path=self.output_path))
+
         start_time = time.time()
-        trainer.train()
+        self.trainer.train()
         end_time = time.time()
         total_time = end_time - start_time
         logger.info(f"Total training time: {total_time / 60:.2f} minutes")
         
-        if valid_dataset:
-            valid_metrics = trainer.evaluate(eval_dataset=valid_dataset)
-            logger.info(valid_metrics)
-        
-        trainer.compute_metrics = partial(self.compute_semantic_metrics, stage="test")
-        evaluation_metric = self.save_metrics(trainer, test_dataset, f"{self.model_name.capitalize()} - {self.model_size.capitalize()}.csv", os.path.join(self.output_path, "metrics.csv"), 
-                                            mode="test", training_time=total_time)
 
-        model_output_path = self.save_model(self.output_path)
+        if self.trainer.eval_dataset is not None:
+            self.trainer.evaluate()
+
+        os.makedirs(self.output_path, exist_ok=True)
+
+        model_name = self.trainer.model.__class__.__name__
+        
+        
+        test_metrics = self.trainer.test()
+        results_csv_path = f"{model_name}.csv"
+        row_name = f"{model_name}_{self.trainer.self.imgsz}x{self.trainer.self.imgsz}_b{self.trainer.batch_size}"
+        evaluation_metric = self.trainer.save_metrics(metrics=test_metrics, experiment_name=row_name, hf=True, filename=results_csv_path, training_time=total_time)
+        
+        weights_path = os.path.join(self.output_path, f"{self.trainer.model.__class__.__name__}_weights.pt")
+        model_output_path = torch.save(self.trainer.model.state_dict(), weights_path)
 
         return evaluation_metric, model_output_path
         
