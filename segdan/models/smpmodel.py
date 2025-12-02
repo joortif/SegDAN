@@ -178,7 +178,7 @@ class SMPModel(pl.LightningModule, SemanticSegmentationModel):
             df_combined = df
 
         file_output_path = os.path.join(self.output_path, filename)
-        df_combined.to_csv(file_output_path, sep=';', index=False)
+        df_combined.to_csv(file_output_path, sep=';', decimal=",", index=False)
 
         self.show_metrics(metrics_dict, "Test")  
 

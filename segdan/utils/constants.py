@@ -5,8 +5,13 @@ IMAGE_RESIZE_VALUES: tuple = (224, 384, 512, 640, 1024)
 AUTOBATCH_SIZES: tuple = (1, 2, 4, 8, 16, 32, 64)
 
 class ReductionMethods(Enum):
+    TFDP = "tfdp"
     VOTE_K = "vote_k"
     CLUSTERING = "clustering"
+
+    @staticmethod
+    def is_embedding(method: str) -> bool:
+        return method.lower() in {ReductionMethods.VOTE_K.value, ReductionMethods.CLUSTERING.value}
 
 class StratificationStrategy(Enum):
     PIXELS = "pixels"

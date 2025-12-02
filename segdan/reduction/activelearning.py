@@ -136,4 +136,4 @@ def fast_vote_K(embeddings_dict:dict, retention_percentage: float, dataset: Imag
         dst_path = os.path.join(reduced_ds.img_dir, filename)
         shutil.copy(src_path, dst_path)
 
-    return reduced_ds   
+    return reduced_ds       

@@ -7,6 +7,9 @@ class LabelExtensions(Enum):
     TXT = '.txt'
     PNG = '.png'
     JPG = '.jpg'
+    JPEG = '.jpeg'
+    TIFF = '.tiff'
+    BMP = '.bmp'
 
     def extensionToEnum(ext):
         for extension in LabelExtensions:

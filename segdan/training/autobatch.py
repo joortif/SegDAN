@@ -7,6 +7,7 @@ from transformers import OneFormerProcessor
 
 from segdan.exceptions.exceptions import NoValidAutobatchConfigException
 import segdan.utils.constants
+import segmentation_models_pytorch as smp
 
 logger = logging.getLogger(__name__)
 

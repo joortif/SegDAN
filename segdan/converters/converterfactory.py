@@ -3,7 +3,6 @@ from segdan.converters.converter import Converter
 from segdan.converters.binary_to_multilabel import BinaryToMultilabelConverter
 from segdan.converters.color_to_multilabel import ColorToMultilabelConverter
 from segdan.converters.json_to_multilabel import JSONToMultilabelConverter
-from segdan.converters.multilabel_to_instance_seg import MultilabelToInstanceSegmentationConverter
 from segdan.converters.multilabel_to_yolo import MultilabelToYOLOConverter
 from segdan.converters.yolo_to_multilabel import YOLOToMultilabelConverter
 
@@ -29,5 +28,5 @@ class ConverterFactory:
         if missing:
             raise ValueError(f"Missing required context params: {missing} for converter {converter_class.__name__}")
         
-        init_args = {key: args[key] for key in required_params if key in args}
+        init_args = {key: args[key] for key in required_params if key in args and args[key] is not None}
         return converter_class(args["input_data"], args["output_dir"], **init_args)

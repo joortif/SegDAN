@@ -1,4 +1,4 @@
-from datasets.semantic_segmentation_dataset import SemanticSegmentationDataset
+from segdan.datasets.semantic_segmentation_dataset import SemanticSegmentationDataset
 
 class SMPDataset(SemanticSegmentationDataset):
     

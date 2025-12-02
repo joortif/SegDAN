@@ -1,9 +1,11 @@
 import os
+from pathlib import Path
 import shutil
 from typing import Optional
 import torch
 import logging
 import cv2
+import yaml
 import matplotlib.pyplot as plt
 import numpy as np
 import segdan.utils.constants
@@ -106,3 +108,15 @@ class Utils():
                 os.remove(path)
         except Exception as e:
             logger.warning(f"Could not remove {path}: {e}")
+
+    @staticmethod
+    def load_encoder_from_yaml(yaml_path: str):
+        yaml_path = Path(yaml_path)
+        
+        if not yaml_path.exists():
+            raise FileNotFoundError(f"{yaml_path} does not exist")
+
+        with yaml_path.open("r", encoding="utf-8") as f:
+            cfg = yaml.safe_load(f)
+
+        return cfg

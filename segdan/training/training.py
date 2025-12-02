@@ -5,12 +5,11 @@ from typing import Optional
 import numpy as np
 from torch.utils.data import DataLoader
 
-from datasets.semantic_segmentation_dataset import SemanticSegmentationDataset
 from segdan.utils.constants import SegmentationType
 from segdan.models.smpmodel import SMPModel
 from segdan.models.hfstransformermodel import HFTransformerModel
 
-from segdan.datasets.hfdataset import HFDataset, HuggingFaceAdapterDataset
+from segdan.datasets.hfdataset import HFDataset
 from segdan.datasets.smpdataset import SMPDataset
 
 from segdan.utils.confighandler import ConfigHandler

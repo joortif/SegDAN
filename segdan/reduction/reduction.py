@@ -3,10 +3,11 @@ import shutil
 import json
 import logging
 
+from segdan.reduction.datasetpruning import prune_dataset
 from segdan.utils.constants import ReductionMethods
 from segdan.extensions.extensions import LabelExtensions
 from segdan.utils.imagelabelutils import ImageLabelUtils
-from segdan.reduction.reduction_strategies import fast_vote_K, reduce_clusters
+from segdan.reduction.activelearning import fast_vote_K, reduce_clusters
 
 logger = logging.getLogger(__name__)
 
@@ -39,7 +40,7 @@ def reduce_JSON(file, image_files, output_path):
     with open(output_path, 'w') as f:
         json.dump(reduced_data, f, indent=4)
 
-def reduce_dataset(config, clustering_results, evaluation_metric, dataset, label_path, embeddings_dict, output_path, verbose):
+def reduce_dataset(config, general_config, clustering_results, evaluation_metric, dataset, label_path, embeddings_dict, output_path, verbose):
     retention_percentage = config.get('retention_percentage')
     use_reduced = config.get('use_reduced')
     method = config.get('reduction_type')
@@ -47,7 +48,10 @@ def reduce_dataset(config, clustering_results, evaluation_metric, dataset, label
     output_path = os.path.join(output_path, "reduction", "images" if use_reduced else "")
     os.makedirs(output_path, exist_ok=True)
     
-    if method.lower() == ReductionMethods.VOTE_K.value:
+    if method.lower() == ReductionMethods.TFDP.value:
+        reduced_ds = prune_dataset(general_config=general_config, dataset=dataset, retention_percentage=retention_percentage, 
+                                   label_dir=label_path, output_dir=output_path)
+    elif method.lower() == ReductionMethods.VOTE_K.value:
         reduced_ds = fast_vote_K(embeddings_dict=embeddings_dict, retention_percentage=retention_percentage, dataset=dataset, output_dir=output_path)
     else:
         reduced_ds = reduce_clusters(config=config, dataset=dataset, embeddings_dict=embeddings_dict, retention_percentage=retention_percentage, 

@@ -14,7 +14,7 @@ import numpy as np
 from types import SimpleNamespace
 from typing import Optional, List, Tuple
 
-from utils.utils import Utils
+from segdan.utils.utils import Utils
 from segdan.metrics.compute_metrics import compute_metrics
 
 logger = logging.getLogger(__name__)
@@ -445,9 +445,9 @@ class HFSegmentationTrainer(Trainer):
 
         file_output_path = os.path.join(os.path.dirname(self.output_path), filename)
         if os.path.exists(file_output_path):
-            df.to_csv(file_output_path, sep=';', mode='a', header=False, index=False)
+            df.to_csv(file_output_path, sep=';', mode='a', decimal=",", header=False, index=False)
         else:
-            df.to_csv(file_output_path, sep=';', index=False)  
+            df.to_csv(file_output_path, sep=';', decimal=",",  index=False)  
 
         logger.info(f"Metrics saved in file {file_output_path}")
 
