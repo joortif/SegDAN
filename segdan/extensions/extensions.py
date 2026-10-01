@@ -18,4 +18,4 @@ class LabelExtensions(Enum):
         raise ExtensionNotFoundException(ext)
     
     def enumToExtension(enum):
-        return enum.value
+        return enum.value.lstrip(".")

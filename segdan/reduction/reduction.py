@@ -15,11 +15,12 @@ def save_labels_subset(image_dir, image_files, labels_dir, label_extension, outp
 
     labels = []
 
+
     for img_file in image_files:
-        
+            
         img_path = os.path.join(image_dir, img_file)
         label = ImageLabelUtils.image_to_label(img_path, labels_dir, label_extension)
-        
+            
         shutil.copy(label, output_path)
 
     return labels

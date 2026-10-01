@@ -10,7 +10,7 @@ from transformers import TrainingArguments
 from packaging import version
 import torch
 
-from models.callbacks import SaveWeightsCallbackHF
+from segdan.models.callbacks import SaveWeightsCallbackHF
 from segdan.models.semanticsegmentationmodel import SemanticSegmentationModel
 from segdan.trainers.hfsegmentationtrainer import HFSegmentationTrainer
 

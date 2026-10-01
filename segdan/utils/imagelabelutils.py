@@ -41,7 +41,7 @@ class ImageLabelUtils:
         
         image_name, _ = os.path.splitext(os.path.basename(img_path))
 
-        label = os.path.join(label_path, f"{image_name}{lbl_ext}")
+        label = os.path.join(label_path, f"{image_name}.{lbl_ext}")
 
         return label
     
@@ -79,6 +79,23 @@ class ImageLabelUtils:
         
         if verbose:
             logger.info(f"Checking label extensions from path: {label_dir}...")
+
+        if os.path.isfile(label_dir):
+            ext = os.path.splitext(label_dir)[1].lower()
+
+            if ext not in ConfigHandler.VALID_ANNOTATION_EXTENSIONS:
+                raise ExtensionNotFoundException(f"Unrecognized extension: {ext}")
+
+            try:
+                enum_ext = LabelExtensions.extensionToEnum(ext)
+                if verbose:
+                    logger.info(f"Label file is in {enum_ext.name} format.")
+
+                return LabelExtensions.enumToExtension(enum_ext)
+
+            except ExtensionNotFoundException as e:
+                logger.error(f"Label file has unknown extension {ext}.")
+                raise e
 
         labels_ext = {os.path.splitext(file)[1].lower() for file in os.listdir(label_dir) if os.path.splitext(file)[1].lower() in ConfigHandler.VALID_ANNOTATION_EXTENSIONS}
 

@@ -139,7 +139,7 @@ def prune_dataset(general_config: dict, dataset: ImageDataset, retention_percent
     label_extension = ImageLabelUtils.check_label_extensions(label_dir, verbose=False)
 
     if label_extension.lower() not in ConfigHandler.VALID_IMAGE_EXTENSIONS:
-        output_dir_transformations = os.path.join(output_dir, "transformations", label_extension.lower())
+        output_dir_transformations = os.path.join(os.path.dirname(os.path.dirname(output_dir)), "transformations", LabelFormat.MASK.value)
 
         args = {
             "input_data": label_dir,
@@ -147,6 +147,7 @@ def prune_dataset(general_config: dict, dataset: ImageDataset, retention_percent
             "background": general_config.get('background', None),
             "threshold": general_config.get('threshold', None),
             "color_dict": general_config.get('color_dict', None),
+            "depth_model": None,
             "img_dir": dataset.img_dir
         }        
         
@@ -169,12 +170,14 @@ def prune_dataset(general_config: dict, dataset: ImageDataset, retention_percent
     imgs_to_select = int(np.floor(retention_percentage * len(dataset.image_files)))
     top_images = scores_sorted[:imgs_to_select]
 
-    filenames = [f"{name}.png" for name, _ in top_images]
-    reduced_ds = ImageDataset(output_dir, filenames)
+    image_extension = ImageLabelUtils.check_label_extensions(dataset.img_dir, verbose=False)
 
-    for filename in filenames:
+    filenames = [f"{name}.{image_extension}" for name, _ in top_images]
+    reduced_ds = ImageDataset(dataset.img_dir, filenames)
+
+    for filename in filenames: 
         src_path = os.path.join(dataset.img_dir, filename)
-        dst_path = os.path.join(reduced_ds.img_dir, filename)
+        dst_path = os.path.join(output_dir, filename)
         shutil.copy(src_path, dst_path)
     
     return reduced_ds 
