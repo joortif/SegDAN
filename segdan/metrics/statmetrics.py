@@ -18,3 +18,12 @@ def f1_score(tp, fp, fn, tn, beta=1):
     beta_fn = (beta**2) * fn
     score = beta_tp / (beta_tp + beta_fn + fp)
     return score
+
+STAT_METRIC_FUNCTIONS = {
+    "accuracy": accuracy,
+    "iou": iou_score,
+    "dice": dice_score,
+    "precision": precision,
+    "recall": recall,
+    "f1": f1_score,
+}

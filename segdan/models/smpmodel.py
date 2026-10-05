@@ -1,6 +1,8 @@
 import os
 import logging
 from typing import Optional
+from segdan.metrics.ccmetrics import CC_METRICS_REGISTRY, CCMetricsTracker
+from segdan.metrics.monaimetrics import MONAI_METRICS_REGISTRY, MonaiMetricsTracker
 import pytorch_lightning as pl
 import segmentation_models_pytorch as smp
 import torch
@@ -43,6 +45,26 @@ class SMPModel(pl.LightningModule, SemanticSegmentationModel):
         self.register_buffer("std", torch.tensor(params["std"]).view(1, 3, 1, 1))
         self.register_buffer("mean", torch.tensor(params["mean"]).view(1, 3, 1, 1))
 
+        self.trackers = []
+
+        for metric in self.metrics:
+            if metric in CC_METRICS_REGISTRY: 
+                self.trackers.append(CCMetricsTracker(self.metrics, 
+                                              stages=("valid", "test"), 
+                                              cc_reduction="patient", 
+                                              aggregate_modes=("patient",), 
+                                              worst_score=imgsz, 
+                                              every_n_epochs=1)) # TODO: Parametrizar every_n_epochs metricas MONAI y CCMetrics
+            elif metric in MONAI_METRICS_REGISTRY:
+                self.trackers.append(MonaiMetricsTracker(self.metrics, 
+                                              stages=("valid", "test"), 
+                                              worst_score=imgsz, 
+                                              every_n_epochs=1)) # TODO: Parametrizar every_n_epochs metricas MONAI y CCMetrics
+
+
+        for tracker in self.trackers:
+            tracker.check_binary(self.binary)    
+
         if self.binary:
             self.loss_mode = smp.losses.BINARY_MODE
         else:
@@ -63,7 +85,7 @@ class SMPModel(pl.LightningModule, SemanticSegmentationModel):
     
     def validate_segmentation_batch(self, image, mask):
 
-        assert image.ndim == 4, f"Expected image ndim=4, got {image.ndim}" # [batch_size, channels, H, W]
+        assert image.ndim == 4, f"Expected image ndim=4, got {image.ndim}"
         h, w = image.shape[2:]
         assert h % 32 == 0 and w % 32 == 0, f"Image dimensions must be divisible by 32, got {h}x{w}"
 
@@ -97,6 +119,10 @@ class SMPModel(pl.LightningModule, SemanticSegmentationModel):
             prob_mask = logits_mask.softmax(dim=1)
             pred_mask = prob_mask.argmax(dim=1)
 
+        for tracker in self.trackers:
+            if tracker.is_active(stage, self.current_epoch):
+                tracker.update(pred_mask, mask, stage)
+
         if self.binary:
             metric_args = {"mode": "binary"}
         else:
@@ -114,7 +140,7 @@ class SMPModel(pl.LightningModule, SemanticSegmentationModel):
         }
 
     def shared_epoch_end(self, outputs, stage):
-        results = compute_metrics(outputs, self.metrics, self.classes, stage)
+        results = compute_metrics(outputs, self.metrics, self.classes, stage, self.trackers)
 
         self.log_dict(results, prog_bar=True)
 
@@ -132,6 +158,10 @@ class SMPModel(pl.LightningModule, SemanticSegmentationModel):
         self.validation_step_outputs.append(valid_loss_info)
         return valid_loss_info
 
+    def on_validation_epoch_start(self):
+        for tracker in self.trackers:
+            tracker.reset("valid")
+
     def on_validation_epoch_end(self):
         self.shared_epoch_end(self.validation_step_outputs, "valid")
         self.validation_step_outputs.clear()
@@ -140,6 +170,10 @@ class SMPModel(pl.LightningModule, SemanticSegmentationModel):
         test_loss_info = self.shared_step(batch, "test")
         self.test_step_outputs.append(test_loss_info)
         return test_loss_info
+
+    def on_test_epoch_start(self):
+        for tracker in self.trackers:
+            tracker.reset("test")
 
     def on_test_epoch_end(self):
         self.shared_epoch_end(self.test_step_outputs, "test")

@@ -62,7 +62,9 @@ class ConfigHandler():
         "segmentation": ["Semantic", "Instance"],
         "semantic_segmentation_models": SEMANTIC_SEGMENTATION_MODELS["smp"] + SEMANTIC_SEGMENTATION_MODELS["hf"],
         "instance_segmentation_models": INSTANCE_SEGMENTATION_MODELS["instance"] + INSTANCE_SEGMENTATION_MODELS["hf"],
-        "semantic_metrics": ["Accuracy", "Precision", "Recall", "IoU (Intersection over Union)", "Dice score"],
+        "semantic_metrics": ["Accuracy", "Precision", "Recall", "IoU (Intersection over Union)", "Dice score", "CC-Dice score",
+                             "CC-Hausdorff Distance (HD)", "CC-Hausdorff Distance 95 (HD95)", "CC-Average Symmetric Surface Distance (ASSD)", "CC-Surface Dice",
+                             "Hausdorff Distance (HD)" ,"Hausdorff Distance 95 (HD95)", "Average Symmetric Surface Distance (ASSD)", "Surface Dice"],
         "instance_metrics": ["Accuracy", "Precision", "Recall", "IoU (Intersection over Union)", "mAP"],
 
         "stratification_types": ["pixels", "objects", "pixel_to_object_ratio"],

@@ -8,6 +8,27 @@ from segdan.utils.constants import SegmentationType
 from segdan.utils.confighandler import ConfigHandler
 from segdan.forms.formutils import FormUtils
 
+METRICS = {
+    "dice" : "Dice",
+    "iou" : "IoU (Intersection over Union)",
+    "accuracy" : "Accuracy",
+    "precision" : "Precision",
+    "recall" : "Recall",
+    "f1" : "F1 Score",
+    "dice": "Dice Score",
+    "dice_cc" : "Dice CC",
+    "hd_cc" : "Hausdorff Distance (HD) CC",
+    "hd95_cc" : "Hausdorff Distance 95 (HD95) CC",
+    "assd_cc" : "Average Symmetric Surface Distance (ASSD)CC",
+    "surface_dice_cc" : "Surface Dice CC",
+    "hd" : "Hausdorff Distance (HD)",
+    "hd95" : "Hausdorff Distance 95 (HD95)",
+    "assd" : "Average Symmetric Surface Distance (ASSD)",
+    "surface_dice" : "Surface Dice"
+}
+
+DISPLAY_TO_CODE = {name: code for code, name in METRICS.items()}
+
 class ModelConfigFrame(ttk.Frame):
 
     def __init__(self, parent, controller, config_data, final_dict):
@@ -173,6 +194,9 @@ class ModelConfigFrame(ttk.Frame):
             self.comparison_frame, textvariable=self.model_data["selection_metric"], values=[metric.capitalize() for metric in self.model_data["evaluation_metrics"]],
             state="readonly", width=15
         )
+        self.segmentation_selection_metric_combobox.bind(
+            "<<ComboboxSelected>>", self.save_selection_metric
+        )
         self.segmentation_selection_metric_combobox.grid(row=1, column=2, padx=10, pady=5)
         ToolTip(self.segmentation_selection_metric_label, msg="Metric used to choose the best segmentation model.")
 
@@ -180,7 +204,12 @@ class ModelConfigFrame(ttk.Frame):
         self.select_previous_model()
         self.select_previous_size()
 
-        self.update_listbox(self.evaluation_metrics_listbox, self.semantic_metrics)
+        self.metric_codes = list(METRICS)
+
+        for code in self.metric_codes:
+            self.evaluation_metrics_listbox.insert("end", METRICS[code])
+
+        #self.update_listbox(self.evaluation_metrics_listbox, self.semantic_metrics)
         self.select_previous_metrics()
 
         self.segmentation_type_combobox.bind("<<ComboboxSelected>>", self.update_segmentation)
@@ -204,6 +233,11 @@ class ModelConfigFrame(ttk.Frame):
                 if option.lower() in selected_values:
                     self.evaluation_metrics_listbox.selection_set(i)
 
+    def save_selection_metric(self, event=None):
+        name = self.segmentation_selection_metric_combobox.get()
+        if name:  # por si todavía no ha elegido nada
+            self.model_data["segmentation_selection_metric"] = DISPLAY_TO_CODE[name]
+
     def save_model_info(self, event):
         selected_index = self.segmentation_models_listbox.curselection()
         selected_model = self.segmentation_models_listbox.get(selected_index)
@@ -211,8 +245,15 @@ class ModelConfigFrame(ttk.Frame):
 
     def save_listbox_values(self, event):
         selected_indices = self.evaluation_metrics_listbox.curselection()
-        self.model_data["evaluation_metrics"] = [self.metrics_list[i].lower() for i in selected_indices]
-        self.segmentation_selection_metric_combobox["values"] = [metric.capitalize() for metric in self.model_data["evaluation_metrics"]]
+        selected_codes = [self.metric_codes[i] for i in selected_indices]
+        display_names = [METRICS[c] for c in selected_codes]
+
+        self.model_data["evaluation_metrics"] = selected_codes
+        self.segmentation_selection_metric_combobox["values"] = [METRICS[c] for c in selected_codes]
+
+        if self.segmentation_selection_metric_combobox.get() not in display_names:
+            self.segmentation_selection_metric_combobox.set("")
+            self.model_data.pop("segmentation_selection_metric", None)
 
     def select_previous_model(self):
         selected_values = [model["model_name"] for model in self.model_data.get("models")]
