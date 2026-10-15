@@ -50,3 +50,7 @@ multiple libraries, and evaluate the results. In contrast, non-expert users can 
 requiring programming knowledge. 
 
 This wizard can also be employed by expert users to obtain an initial pipeline that can be later refined.
+
+## Acknowledgements
+
+This work is partially supported by Agencia de Desarrollo Económico de La Rioja [ADER 2022-I-IDI-00015].
