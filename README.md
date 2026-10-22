@@ -105,7 +105,7 @@ In SegDAN, MedImageInsight can be used as an embedding extractor to obtain image
 
 ## Supported models
 
-Currently, the framework is still under development, and support is limited to the [Segmentation Models](https://smp.readthedocs.io/en/latest/models.html#unet) library. The framework supports the following models for semantic segmentation:
+The framework currently supports CNN-based architectures from Segmentation Models Pytorch ([SMP](https://smp.readthedocs.io/en/latest/models.html)), transformer-based models from the [Hugging Face Hub](https://huggingface.co/docs/hub/index), and [Ultralytics](https://docs.ultralytics.com/) YOLO models for instance segmentation:
 
 | Model name | Library | Architecture | Task | Key Features / Notes |
 |--------------|--------------|--------------|--------------|-------------
@@ -126,7 +126,7 @@ Currently, the framework is still under development, and support is limited to t
 | OneFormer | [Hugging Face](https://huggingface.co/docs/transformers/model_doc/oneformer) | Transformer | Semantic / Instance / Panoptic Segmentation | Universal, task-conditioned architecture using a single unified model. |
 | YOLO v11 | [Ultralytics](https://docs.ultralytics.com/models/yolo11) | CNN | Instance Segmentation / Detection | High performance and accuracy for real-time processing. | 
 
-Models can be used with different encoders, that can be found in the Segmentation Models library [documentation](https://smp.readthedocs.io/en/latest/encoders.html).
+CNN-based models can be used with different encoders, that can be found in the Segmentation Models library [documentation](https://smp.readthedocs.io/en/latest/encoders.html).
 
 ## Semantic Segmentation
 
