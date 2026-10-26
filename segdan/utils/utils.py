@@ -63,7 +63,7 @@ class Utils():
                 logger.info(f"Dimensions {mode_height}px adjusted down to {new_height}px (compatible with stride {stride}).")
             mode_height = mode_width = new_height
 
-        if original_mode_height != new_height or original_mode_width != new_height:
+        if original_mode_height != mode_height or original_mode_width != mode_width:
             logger.info(f"Images will be resized to {mode_height}px height and {mode_width}px width.")
             
         return mode_height

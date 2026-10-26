@@ -63,3 +63,59 @@ def get_validation_augmentation(resize_height = 512, resize_width=512, backgroun
     augment = A.Compose(test_transform)
     augment.background = background
     return augment
+
+def get_yolo_augmentation(image_fill=114):
+
+    return [
+        A.HorizontalFlip(p=0.5),
+
+        A.Affine(
+            scale=(0.8, 1.2),
+            translate_percent={"x": 0.1, "y": 0.1},
+            rotate=(-10, 10),
+            fill=image_fill,
+            border_mode=cv2.BORDER_CONSTANT,
+            p=1.0,
+        ),
+
+        A.OneOf(
+            [
+                A.GaussNoise(std_range=(0.1, 0.2), p=1.0),
+                A.CLAHE(p=1.0),
+                A.RandomBrightnessContrast(p=1.0),
+                A.RandomGamma(p=1.0),
+            ],
+            p=0.9,
+        ),
+
+        A.OneOf(
+            [
+                A.Sharpen(p=1.0),
+                A.Blur(blur_limit=3, p=1.0),
+                A.MotionBlur(blur_limit=3, p=1.0),
+            ],
+            p=0.9,
+        ),
+
+        A.OneOf(
+            [
+                A.RandomBrightnessContrast(p=1.0),
+                A.HueSaturationValue(p=1.0),
+            ],
+            p=0.9,
+        ),
+
+        A.CoarseDropout(
+            num_holes_range=(1, 8),
+            hole_height_range=(8, 32),
+            hole_width_range=(8, 32),
+            fill=image_fill,
+            p=0.3,
+        ),
+
+        A.GridDistortion(
+            border_mode=cv2.BORDER_CONSTANT,
+            fill=image_fill,
+            p=0.2,
+        ),
+    ]

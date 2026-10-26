@@ -1,5 +1,6 @@
 import os
 import logging
+import pandas as pd
 import shutil
 from typing import Optional 
 import numpy as np
@@ -8,6 +9,7 @@ from torch.utils.data import DataLoader
 from segdan.utils.constants import SegmentationType
 from segdan.models.smpmodel import SMPModel
 from segdan.models.hfstransformermodel import HFTransformerModel
+from segdan.models.yolomodel import YOLOModel
 
 from segdan.datasets.hfdataset import HFDataset
 from segdan.datasets.smpdataset import SMPDataset
@@ -16,6 +18,8 @@ from segdan.utils.confighandler import ConfigHandler
 from segdan.utils.utils import Utils
 from segdan.datasets.augments import get_training_augmentation, get_validation_augmentation
 
+
+
 logger = logging.getLogger(__name__)
 
 smp_models_lower = [name.lower() for name in ConfigHandler.SEMANTIC_SEGMENTATION_MODELS["smp"]]
@@ -23,24 +27,42 @@ hf_models_lower = [name.lower() for name in ConfigHandler.SEMANTIC_SEGMENTATION_
 
 def model_training(model_data: dict, general_data:dict, split_path: str, model_output_path: str, hold_out: bool, classes: Optional[np.ndarray], mode_height: int, mode_width:int):
 
-    epochs = model_data["epochs"]
+    epochs = int(model_data["epochs"])
     evaluation_metrics = model_data["evaluation_metrics"]
-    selection_metric = model_data["selection_metric"]
+
+    selection_metric = (
+        model_data.get("segmentation_selection_metric") or model_data.get("selection_metric") or "map"
+    )
+
+    if hasattr(selection_metric, "get"):
+        selection_metric = selection_metric.get()
+
     segmentation_type = model_data["segmentation"]
     models = model_data["models"]
     background = general_data["background"]
 
     os.makedirs(model_output_path, exist_ok=True)
+
+    imgsz = Utils.calculate_closest_resize(mode_height, mode_width)
     
     if segmentation_type == SegmentationType.SEMANTIC.value:
         models = rename_model_sizes(models)
 
-        resize_shape = Utils.calculate_closest_resize(mode_height, mode_width)
-
-        semantic_model_training(epochs=epochs, imgsz=resize_shape, evaluation_metrics=evaluation_metrics, selection_metric=selection_metric, models=models, 
+        return semantic_model_training(epochs=epochs, imgsz=imgsz, evaluation_metrics=evaluation_metrics, selection_metric=selection_metric, models=models, 
                                 split_path=split_path, hold_out=hold_out, classes=classes, background=background, output_path=model_output_path)
 
-    return
+    if segmentation_type == SegmentationType.INSTANCE.value:
+
+        batch_size = model_data.get("batch_size", general_data.get("batch_size", 8))
+
+        if hasattr(batch_size, "get"):
+            batch_size = batch_size.get()
+
+        return instance_model_training(epochs=epochs, imgsz=imgsz, evaluation_metrics=evaluation_metrics, selection_metric=selection_metric, models=models,
+                                split_path=split_path, hold_out=hold_out, classes=classes, background=background, output_path=model_output_path, batch_size=batch_size)
+    raise ValueError(f"Unsupported segmentation type: {segmentation_type}. Supported types are: {SegmentationType.SEMANTIC.value}, {SegmentationType.INSTANCE.value}")
+
+
 
 def rename_model_sizes(models: np.ndarray):
     
@@ -106,7 +128,6 @@ def build_dataset(model_type:str, split_path: str, batch_size:int, classes, imgs
 
     # TODO: YOLO or other semantic models
     raise ValueError(f"Unsupported model type {model_type}")
-
 
 def semantic_model_training(epochs: int, imgsz:int, evaluation_metrics: np.ndarray, selection_metric:str, models: np.ndarray, split_path: str, hold_out: bool, classes: np.ndarray, background: Optional[int], output_path: str):
 
@@ -194,3 +215,58 @@ def semantic_model_training(epochs: int, imgsz:int, evaluation_metrics: np.ndarr
     logger.info(f"{selection_metric.capitalize()} score: {best_metric}")
         
     return best_model_path
+
+def instance_model_training(epochs: int, imgsz:int, evaluation_metrics: np.ndarray, selection_metric:str, models: np.ndarray, split_path: str, hold_out: bool, classes: np.ndarray, background: Optional[int], output_path: str, batch_size:int):
+    if not hold_out:
+        raise NotImplementedError("Cross-validation is not implemented for instance segmentation models.")
+
+    if isinstance(models, str):
+        models = [{"model_name": models, "model_size": None}]
+
+    os.makedirs(output_path, exist_ok=True)
+
+    best_metric = -float("inf")
+    best_model_path = None
+    best_model_name = None
+    validation_rows = []
+
+    for model_config in models:
+        model_name = str(model_config["model_name"]).lower()
+        model_size = str(model_config.get("model_size", "small")).lower()
+
+        if model_name not in {"yolo", "yolo11", "yolo11-seg"}:
+            raise ValueError(f"Model {model_name} not implemented yet")
+
+        model = YOLOModel(classes=classes, epochs=epochs, imgsz=imgsz, metrics=evaluation_metrics, selection_metric=selection_metric,
+                          output_path=output_path, model_name=model_name, model_size=model_size, batch_size=batch_size)
+
+        run_name = f"yolo11-{model.model_size}-seg"
+
+        score, candidate_path = model.run_training(split_path=split_path, run_name=run_name, test_root=split_path)
+
+        validation_rows.append({
+            "model": model.weights_name,
+            "selection_metric": selection_metric,
+            "validation_score": score,
+            **{
+                f"{key}_val": value
+                for key, value in model.validation_metrics.items()
+            },
+            "training_time": model.training_time,
+            "checkpoint_path": str(candidate_path)
+        })
+
+        if score > best_metric:
+            best_metric = score
+            best_model = model
+            best_model_path = candidate_path
+
+        if best_model is None:
+            raise RuntimeError("No best model found. Training may have failed.")
+
+        pd.DataFrame(validation_rows).to_csv(os.path.join(output_path, "yolo_validation_metrics.csv"), sep=";", decimal=",", index=False)
+
+
+        logger.info(f"Best model: {best_model.weights_name}, validation {selection_metric} = {best_metric:.4f}")
+
+        return best_model_path

@@ -8,24 +8,29 @@ from segdan.utils.constants import SegmentationType
 from segdan.utils.confighandler import ConfigHandler
 from segdan.forms.formutils import FormUtils
 
-METRICS = {
-    "dice" : "Dice",
-    "iou" : "IoU (Intersection over Union)",
-    "accuracy" : "Accuracy",
-    "precision" : "Precision",
-    "recall" : "Recall",
-    "f1" : "F1 Score",
+SEMANTIC_METRICS = {
     "dice": "Dice Score",
-    "dice_cc" : "Dice CC",
-    "hd_cc" : "Hausdorff Distance (HD) CC",
-    "hd95_cc" : "Hausdorff Distance 95 (HD95) CC",
-    "assd_cc" : "Average Symmetric Surface Distance (ASSD)CC",
-    "surface_dice_cc" : "Surface Dice CC",
-    "hd" : "Hausdorff Distance (HD)",
-    "hd95" : "Hausdorff Distance 95 (HD95)",
-    "assd" : "Average Symmetric Surface Distance (ASSD)",
-    "surface_dice" : "Surface Dice"
+    "iou": "IoU (Intersection over Union)",
+    "accuracy": "Accuracy",
+    "precision": "Precision",
+    "recall": "Recall",
+    "f1": "F1 Score",
+    "dice_cc": "Dice CC",
+    "hd_cc": "Hausdorff Distance (HD) CC",
+    "hd95_cc": "Hausdorff Distance 95 (HD95) CC",
+    "assd_cc": "Average Symmetric Surface Distance (ASSD) CC",
+    "surface_dice_cc": "Surface Dice CC",
+    "hd": "Hausdorff Distance (HD)",
+    "hd95": "Hausdorff Distance 95 (HD95)",
+    "assd": "Average Symmetric Surface Distance (ASSD)",
+    "surface_dice": "Surface Dice",
 }
+
+INSTANCE_METRICS = {
+    "map": "mAP50-95",
+    "map50": "mAP50",
+}
+METRICS = {**SEMANTIC_METRICS, **INSTANCE_METRICS}
 
 DISPLAY_TO_CODE = {name: code for code, name in METRICS.items()}
 
@@ -56,6 +61,8 @@ class ModelConfigFrame(ttk.Frame):
                 }
             
         self.model_data = self.config_data["model_data"]
+        self.model_size_var = tk.StringVar(value="medium")
+        self.main_size_label_to_code = {}
         
         self.row=0
 
@@ -87,6 +94,8 @@ class ModelConfigFrame(ttk.Frame):
         button_frame.grid_columnconfigure(1, weight=0)
 
     def model_config_widgets(self):
+
+        
         self.models_list = self.semantic_models
         self.metrics_list = self.semantic_metrics
         segmentation_types = ConfigHandler.CONFIGURATION_VALUES["segmentation"]
@@ -127,7 +136,7 @@ class ModelConfigFrame(ttk.Frame):
 
 
         self.model_size_combobox = ttk.Combobox(
-            self.model_config_labelframe, values=self.model_sizes, state="readonly", width=15, textvariable=self.model_data["models"][0]["model_size"]
+            self.model_config_labelframe, values=self.model_sizes, state="readonly", width=15, textvariable=self.model_size_var
         )
         self.model_size_combobox.grid(row=1, column=2, padx=10, pady=5)
         
@@ -136,6 +145,13 @@ class ModelConfigFrame(ttk.Frame):
 
         self.evaluation_metrics_listbox = tk.Listbox(
             self.model_config_labelframe, selectmode="multiple", height=5, exportselection=0
+        )
+        self.metric_map = SEMANTIC_METRICS
+        self.metric_codes = list(self.metric_map)
+        
+        for code in self.metric_codes:
+            self.evaluation_metrics_listbox.insert(
+            "end", self.metric_map[code]
         )
 
         scrollbar_metrics = tk.Scrollbar(self.evaluation_metrics_listbox, orient=tk.VERTICAL, command=self.evaluation_metrics_listbox.yview, width=0)
@@ -218,9 +234,88 @@ class ModelConfigFrame(ttk.Frame):
         self.segmentation_models_listbox.bind("<<ListboxSelect>>", self.save_model_info)
         self.evaluation_metrics_listbox.bind("<<ListboxSelect>>", self.save_listbox_values)
 
+    def update_main_model_size_options(self, event=None):
+        selected = self.segmentation_models_listbox.curselection()
+
+        if selected:
+            model_name = self.segmentation_models_listbox.get(
+                selected[0]
+            ).strip().lower()
+        elif self.model_data.get("models"):
+            model_name = str(
+                self.model_data["models"][0].get("model_name", "")
+            ).strip().lower()
+        else:
+            model_name = ""
+
+        if model_name in {"yolo", "yolov8", "yolo8", "yolo11"}:
+            options = [
+                ("Nano (n)", "n"),
+                ("Small (s)", "s"),
+                ("Medium (m)", "m"),
+                ("Large (l)", "l"),
+                ("Extra large (x)", "x"),
+            ]
+            default_code = "n"
+
+        elif model_name == "oneformer":
+            options = [
+                ("Small", "small"),
+                ("Large", "large"),
+            ]
+            default_code = "small"
+
+        else:
+            options = [
+                ("Small", "small"),
+                ("Medium", "medium"),
+                ("Large", "large"),
+            ]
+            default_code = "medium"
+
+        self.main_size_label_to_code = dict(options)
+        code_to_label = {
+            code: label for label, code in options
+        }
+
+        self.model_size_combobox["values"] = [
+            label for label, _ in options
+        ]
+
+        models = self.model_data.get("models", [])
+        current_size = (
+            models[0].get("model_size", default_code)
+            if models else default_code
+        )
+
+        if isinstance(current_size, tk.Variable):
+            current_size = current_size.get()
+
+        current_size = str(current_size).strip().lower()
+
+        if current_size in code_to_label:
+            display_value = code_to_label[current_size]
+        else:
+            display_value = code_to_label[default_code]
+
+        self.model_size_var.set(display_value)
+
+        if models:
+            self.model_data["models"][0]["model_size"] = (
+                self.main_size_label_to_code[display_value]
+            )
+
     def update_model_size(self, event):
-        selected_size = self.model_size_combobox.get()
-        self.model_data["models"][0]["model_size"] = selected_size.lower()
+        if not self.model_data.get("models"):
+            return
+
+        display_value = self.model_size_var.get()
+        size_code = self.main_size_label_to_code.get(
+            display_value,
+            display_value.lower(),
+        )
+
+        self.model_data["models"][0]["model_size"] = size_code
 
     def select_previous_metrics(self):
         selected_values = [metric for metric in self.model_data.get("evaluation_metrics")]
@@ -239,17 +334,36 @@ class ModelConfigFrame(ttk.Frame):
             self.model_data["segmentation_selection_metric"] = DISPLAY_TO_CODE[name]
 
     def save_model_info(self, event):
-        selected_index = self.segmentation_models_listbox.curselection()
-        selected_model = self.segmentation_models_listbox.get(selected_index)
-        self.model_data["models"][0]["model_name"] = selected_model.lower()
+        selected = self.segmentation_models_listbox.curselection()
+
+        if not selected:
+            return
+
+        selected_model = self.segmentation_models_listbox.get(
+            selected[0]
+        ).strip().lower()
+
+        if not self.model_data.get("models"):
+            self.model_data["models"] = [{
+                "model_name": selected_model,
+                "model_size": "medium",
+            }]
+        else:
+            self.model_data["models"][0]["model_name"] = selected_model
+
+        self.update_main_model_size_options()
 
     def save_listbox_values(self, event):
         selected_indices = self.evaluation_metrics_listbox.curselection()
-        selected_codes = [self.metric_codes[i] for i in selected_indices]
-        display_names = [METRICS[c] for c in selected_codes]
+        selected_codes = [
+            self.metric_codes[i] for i in selected_indices
+        ]
+        display_names = [
+            self.metric_map[code] for code in selected_codes
+        ]
 
         self.model_data["evaluation_metrics"] = selected_codes
-        self.segmentation_selection_metric_combobox["values"] = [METRICS[c] for c in selected_codes]
+        self.segmentation_selection_metric_combobox["values"] = display_names
 
         if self.segmentation_selection_metric_combobox.get() not in display_names:
             self.segmentation_selection_metric_combobox.set("")
@@ -267,13 +381,7 @@ class ModelConfigFrame(ttk.Frame):
                     self.segmentation_models_listbox.selection_set(i)
 
     def select_previous_size(self):
-        selected_index = self.segmentation_models_listbox.curselection()
-        if selected_index:
-            selected_model = self.segmentation_models_listbox.get(selected_index[0])
-            for existing_model in self.model_data["models"]:
-                if existing_model["model_name"] == selected_model.lower():
-                    model_size = existing_model["model_size"] 
-                    self.model_size_combobox.set(model_size.capitalize())
+        self.update_main_model_size_options()
 
     def update_listbox(self, listbox, items):
         listbox.delete(0, tk.END)
@@ -285,35 +393,31 @@ class ModelConfigFrame(ttk.Frame):
 
         if selected_type.lower() == SegmentationType.SEMANTIC.value:
             self.models_list = self.semantic_models
-            self.metrics_list = self.semantic_metrics
-
-            self.update_listbox(self.evaluation_metrics_listbox, self.semantic_metrics)
-            self.update_listbox(self.segmentation_models_listbox, self.semantic_models)
-
-        elif selected_type.lower() == SegmentationType.INSTANCE.value:
+            self.metric_map = SEMANTIC_METRICS
+        else:
             self.models_list = self.instance_models
-            self.metrics_list = self.instance_metrics
+            self.metric_map = INSTANCE_METRICS
 
-            self.update_listbox(self.evaluation_metrics_listbox, self.instance_metrics)
-            self.update_listbox(self.segmentation_models_listbox, self.instance_models)
+        self.metric_codes = list(self.metric_map)
 
-        self.model_data["evaluation_metrics"] = []
-        self.model_data["models"] = []
-        self.added_models_listbox.delete(0, tk.END)
+        self.update_listbox(
+            self.evaluation_metrics_listbox,
+            [self.metric_map[code] for code in self.metric_codes],
+        )
+        self.update_listbox(
+            self.segmentation_models_listbox,
+            self.models_list,
+        )
 
-        self.segmentation_models_listbox.selection_clear(0, tk.END) 
-        self.segmentation_models_listbox.selection_set(0)
-        self.evaluation_metrics_listbox.selection_set(0)
+        self.model_data["evaluation_metrics"] = [self.metric_codes[0]]
 
-        selected_index_model = self.segmentation_models_listbox.curselection()
-        selected_model = self.segmentation_models_listbox.get(selected_index_model)
-        selected_size = self.model_size_combobox.get()
-
-        self.model_data["models"].append({"model_name":selected_model, "model_size":selected_size})
-
-        selected_index_metric = self.evaluation_metrics_listbox.curselection()
-        selected_metric = self.evaluation_metrics_listbox.get(selected_index_metric)
-        self.model_data["evaluation_metrics"].append(selected_metric)
+        self.segmentation_selection_metric_combobox["values"] = list(
+            self.metric_map.values()
+        )
+        self.segmentation_selection_metric_combobox.set(
+            self.metric_map[self.metric_codes[0]]
+        )
+        self.save_selection_metric()
 
     def validate_int(self, value):
         return value.isdigit() or value == ""

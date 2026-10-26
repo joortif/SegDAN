@@ -37,7 +37,7 @@ class ConfigHandler():
     }
 
     INSTANCE_SEGMENTATION_MODELS = {
-        "instance": ["YOLO", "Mask R-CNN"],
+        "instance": ["YOLO"],
         "hf": ["Mask2Former", "OneFormer"]
     }
 
@@ -65,7 +65,7 @@ class ConfigHandler():
         "semantic_metrics": ["Accuracy", "Precision", "Recall", "IoU (Intersection over Union)", "Dice score", "CC-Dice score",
                              "CC-Hausdorff Distance (HD)", "CC-Hausdorff Distance 95 (HD95)", "CC-Average Symmetric Surface Distance (ASSD)", "CC-Surface Dice",
                              "Hausdorff Distance (HD)" ,"Hausdorff Distance 95 (HD95)", "Average Symmetric Surface Distance (ASSD)", "Surface Dice"],
-        "instance_metrics": ["Accuracy", "Precision", "Recall", "IoU (Intersection over Union)", "mAP"],
+        "instance_metrics": ["mAP50-95", "mAP50"],
 
         "stratification_types": ["pixels", "objects", "pixel_to_object_ratio"],
 
@@ -570,23 +570,76 @@ class ConfigHandler():
                 print("Warning: Cross-validation is enabled. Be aware that this may significantly increase computational time.")
 
 
-        if data.get("segmentation") not in ConfigHandler.CONFIGURATION_VALUES["segmentation"]:
-            raise ValueError(f"Invalid segmentation type. Must be one of: {ConfigHandler.CONFIGURATION_VALUES['segmentation']}.")
+        segmentation = str(data["segmentation"]).lower()
 
-        if data["segmentation"] == SegmentationType.SEMANTIC.value:
-            models = data.get("semantic_segmentation_models", [])
-            if not all(model in ConfigHandler.CONFIGURATION_VALUES["semantic_segmentation_models"] for model in models):
-                raise ValueError(f"Invalid semantic segmentation models. Must be one of: {ConfigHandler.CONFIGURATION_VALUES['semantic_segmentation_models']}.")
+        if segmentation not in {
+            SegmentationType.SEMANTIC.value,
+            SegmentationType.INSTANCE.value,
+        }:
+            raise ValueError(
+                f"Segmentation  {segmentation}"
+            )
 
-        if data["segmentation"] == SegmentationType.INSTANCE.value:
-            models = data.get("instance_segmentation_models", [])
-            if not all(model in ConfigHandler.CONFIGURATION_VALUES["instance_segmentation_models"] for model in models):
-                raise ValueError(f"Invalid instance segmentation models. Must be one of: {ConfigHandler.CONFIGURATION_VALUES['instance_segmentation_models']}.")
-        
-        if data.get("segmentation_metric") not in ConfigHandler.CONFIGURATION_VALUES["segmentation_metric"]:
-            raise ValueError(f"Invalid evaluation metric. Must be one of {ConfigHandler.CONFIGURATION_VALUES['segmentation_metric']}.")
-        
-        if not isinstance(data["epochs"], int): 
-            raise ValueError(f"The value of 'epochs' must be an integer, but got {type(data['epochs'])}.")
+        data["segmentation"] = segmentation
+
+        raw_models = data["models"]
+
+        if isinstance(raw_models, str):
+            model_names = [raw_models]
+        elif isinstance(raw_models, list):
+            model_names = [
+                model["model_name"] if isinstance(model, dict) else model
+                for model in raw_models
+            ]
+        else:
+            raise ValueError("'models' debe ser un nombre o una lista de modelos.")
+
+        normalize = lambda name: (
+            str(name).lower().replace("-", "").replace(" ", "")
+        )
+
+        if segmentation == SegmentationType.SEMANTIC.value:
+            valid_models = ConfigHandler.CONFIGURATION_VALUES[
+                "semantic_segmentation_models"
+            ]
+            valid_metrics = {
+                "accuracy", "iou", "dice", "dicescore", "dicescore",
+                "precision", "recall", "f1",
+                "dicecc", "hdcc", "hd95cc", "assdcc", "surfacedicecc",
+                "hd", "hd95", "assd", "surfacedice",
+            }
+        else:
+            valid_models = ConfigHandler.CONFIGURATION_VALUES[
+                "instance_segmentation_models"
+            ]
+            valid_metrics = {
+                "map", "map50", "map75", "map5095",
+            }
+
+        valid_model_names = {normalize(name) for name in valid_models}
+
+        unsupported = [
+            name for name in model_names
+            if normalize(name) not in valid_model_names
+        ]
+
+        if unsupported:
+            raise ValueError(
+                f"Modelos no soportados para {segmentation}: {unsupported}"
+            )
+
+        metric = normalize(data["segmentation_metric"])
+
+        if metric not in valid_metrics:
+            raise ValueError(
+                f"Métrica no válida para {segmentation}: "
+                f"{data['segmentation_metric']}"
+            )
+
+        if segmentation == SegmentationType.INSTANCE.value:
+            if metric == "map5095":
+                data["segmentation_metric"] = "map"
+            else:
+                data["segmentation_metric"] = metric
         
         return data

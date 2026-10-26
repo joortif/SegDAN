@@ -10,3 +10,7 @@ lightning_logs/
 build/
 .ipynb_checkpoints/
 lightning_logs/
+
+general_config.yaml
+.vscode/settings.json
+general_mmotu_config.yaml
